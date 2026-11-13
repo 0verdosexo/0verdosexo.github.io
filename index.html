@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>모래 요새 술래잡기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="touch"></div>
+<div id="vig" class="hud"></div>
+<div id="fx" class="hud"></div>
+<div id="steps" class="hud"><i></i><b>발소리</b></div>
+<div id="blind" class="hud hidden"></div>
+<div id="hurt" class="hud"></div>
+<div id="dmgDir" class="hud"><i></i></div>
+<div id="hpBox" class="hud hidden"><div id="hpBar"><div id="hpFill"></div></div><span id="hpTxt">체력 100</span></div>
+
+<div id="status" class="hud hidden">
+  <div class="chiprow">
+    <span id="roleChip" class="chip role-runner">도망자</span>
+    <span id="orbCount" class="chip">구슬 <b>0</b> / 10</span>
+    <span id="oppChip" class="chip hidden"></span>
+    <button id="sndBtn" class="chip" aria-label="소리 켜고 끄기">🔊</button>
+    <button id="quit" class="chip">나가기</button>
+  </div>
+  <div id="hint"></div>
+  <div id="abil"></div>
+</div>
+<div id="mmWrap" class="hud hidden" title="탭하면 확대/축소"><canvas id="mm"></canvas></div>
+<div id="banner" class="hud hidden"></div>
+<div id="count" class="hud hidden"><div id="countNum">3</div><div id="tip"></div></div>
+<div id="cross" class="hud hidden"></div>
+<div id="joy" class="hud hidden"><div id="knob"></div></div>
+<button id="jump" class="hud rbtn hidden" aria-label="점프"><span>점프</span></button>
+<button id="act" class="hud rbtn hidden" aria-label="수집"><span id="actLabel">수집</span></button>
+<button id="fire" class="hud rbtn hidden" aria-label="발사"><span>발사<small id="ammoTxt">5/5</small></span></button>
+<button id="reload" class="hud rbtn hidden" aria-label="재장전"><span>재장전</span></button>
+<div id="keys" class="hud hidden">
+  <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>이동</span>
+  <span><kbd>Shift</kbd></span><span>조용히 걷기</span>
+  <span><kbd>Space</kbd></span><span>점프</span>
+  <span><kbd>E</kbd><kbd>클릭</kbd></span><span>수집, 잡기, 상황 버튼</span>
+  <span><kbd>C</kbd></span><span>슬라이딩 (도망자)</span>
+  <span><kbd>Q</kbd></span><span>레이더 (술래)</span>
+  <span><kbd>클릭</kbd><kbd>F</kbd></span><span>사격 (총이 있을 때)</span>
+  <span><kbd>R</kbd></span><span>재장전 (3초, 못 움직임)</span>
+  <span><kbd>M</kbd></span><span>미니맵 확대</span>
+  <span id="lockTip">화면을 클릭하면 마우스로 시점을 돌릴 수 있어요</span>
+</div>
+
+<!-- MENU -->
+<div id="menu" class="overlay">
+  <div class="card">
+    <h1 class="title">모래 요새<small>1인칭 술래잡기</small></h1>
+    <p class="lead">도망자는 구슬을 모아 술래 쪽 탈출문으로 빠져나가고, 술래는 보이지 않는 도망자를 찾아 잡아요.</p>
+    <div class="label">조작 방식</div>
+    <div class="seg2" id="ctrlSeg" role="radiogroup" aria-label="조작 방식">
+      <button class="seg" data-v="joy" role="radio">조이스틱<small>휴대폰, 태블릿</small></button>
+      <button class="seg" data-v="kb" role="radio">키보드 + 마우스<small>컴퓨터</small></button>
+    </div>
+    <div class="label">모드</div>
+    <div class="seg2" id="modeSeg" role="radiogroup" aria-label="모드">
+      <button class="seg" data-v="tag" role="radio">술래잡기<small>구슬 모아 탈출</small></button>
+      <button class="seg" data-v="duel" role="radio">1:1 총싸움<small>먼저 3번 쓰러뜨리기</small></button>
+    </div>
+    <div class="label">맵</div>
+    <div class="seg2" id="mapSeg" role="radiogroup" aria-label="맵"></div>
+    <div id="mapDesc"></div>
+    <button class="mode" id="goAi"><strong>AI 술래와 하기</strong><span id="aiSub">혼자서 AI 술래를 피해 탈출해요</span></button>
+    <button class="mode alt" id="goOnline"><strong>온라인 대결</strong><span>방을 만들거나 코드로 친구 방에 들어가요</span></button>
+    <details>
+      <summary>게임 설정</summary>
+      <div class="label">AI 난이도</div>
+      <div class="seg2" id="diffSeg" style="--n:3" role="radiogroup" aria-label="AI 난이도">
+        <button class="seg" data-v="easy" role="radio">쉬움</button><button class="seg" data-v="normal" role="radio">보통</button><button class="seg" data-v="hard" role="radio">어려움</button>
+      </div>
+      <div class="label">시간대 (AI 모드)</div>
+      <div class="seg2" id="themeSeg" style="--n:3" role="radiogroup" aria-label="시간대">
+        <button class="seg" data-v="day" role="radio">낮</button><button class="seg" data-v="sunset" role="radio">노을</button><button class="seg" data-v="night" role="radio">밤</button>
+      </div>
+      <div class="label">그래픽 품질</div>
+      <div class="seg2" id="gfxSeg" style="--n:3" role="radiogroup" aria-label="그래픽 품질">
+        <button class="seg" data-v="high" role="radio">높음<small>그림자, 빛 번짐</small></button><button class="seg" data-v="medium" role="radio">보통<small>휴대폰 권장</small></button><button class="seg" data-v="low" role="radio">낮음<small>가볍게</small></button>
+      </div>
+      <div class="note" id="gfxNote"></div>
+      <div class="row2"><label for="sens">시점 감도</label><input type="range" id="sens" min="0.5" max="2" step="0.1"></div>
+      <div class="row2"><label for="sndChk">효과음</label><input type="checkbox" id="sndChk"></div>
+      <div class="row2"><label for="aiGun">AI 술래가 총 사용 (술래잡기)</label><input type="checkbox" id="aiGun"></div>
+    </details>
+    <details>
+      <summary>규칙과 조작법</summary>
+      <div class="rules">
+        <p><span class="dot" style="background:var(--runner)"></span>도망자는 술래 위치가 항상 미니맵에 보여요. 술래에게 도망자는 숨겨져 있어요.</p>
+        <p><span class="dot" style="background:var(--zone)"></span>노란 구역(A, B 사이트)에 들어간 도망자는 술래에게 위치가 드러나요.</p>
+        <p><span class="dot" style="background:var(--orb)"></span>구슬 옆에서 수집 버튼을 누르면 2초 뒤에 얻어요. 옥상과 다리 위에도 구슬이 있어요.</p>
+        <p><span class="dot" style="background:var(--rock)"></span>구슬이 근처에 없을 때 수집 버튼은 슬라이딩이 돼요. 줄무늬 낮은 통로는 슬라이딩으로만 지나갈 수 있어서 도망자 전용 지름길이에요.</p>
+        <p><span class="dot" style="background:var(--portal)"></span>보라색 텔레포트 문은 도망자만 써요. 한쪽에 들어가면 반대쪽 문에서 나와요.</p>
+        <p><span class="dot" style="background:#9fb6ff"></span>조이스틱을 살짝만 밀거나 Shift를 누르면 조용히 걸어요. 뛰면 가까운 술래에게 발소리 방향이 보여요.</p>
+        <p><span class="dot" style="background:var(--danger)"></span>술래 속도는 도망자의 0.95배예요. 술래는 전방 60도만 보이고, 10초마다 레이더로 도망자 위치를 잠깐 볼 수 있어요.</p>
+        <p><span class="dot" style="background:#5fd38a"></span>도망자 체력은 100이에요. 총 옵션을 켜면 술래가 10발짜리 총을 들어요. 몸에 맞으면 10, 머리에 맞으면 15. 재장전은 3초이고 그동안 움직일 수 없어요.</p>
+        <p><span class="dot" style="background:#2f5fd0"></span>1:1 총싸움은 구슬과 역할 없이 서로 쏘는 모드예요. 먼저 3번 쓰러뜨리면 이겨요.</p>
+      </div>
+    </details>
+    <div class="note" id="bestNote"></div>
+    <div class="note err hidden" id="mapWarn"></div>
+  </div>
+</div>
+
+<!-- ONLINE -->
+<div id="online" class="overlay hidden">
+  <div class="card">
+    <h2>온라인 대결</h2>
+    <p class="lead" style="margin:2px 0 6px">계정 없이 방 코드만으로 연결돼요. 서로 다른 기기와 네트워크에서도 중계 서버를 거쳐 연결돼요. 방을 만든 사람이 방장이 되어 설정을 정해요.</p>
+    <div class="label">내 닉네임</div>
+    <input id="nick" class="txt" maxlength="10" autocomplete="off" spellcheck="false" aria-label="닉네임">
+    <button class="mode" id="createBtn"><strong>방 만들기</strong><span>방 코드를 만들어 친구에게 알려줘요</span></button>
+    <div class="label">친구 방에 들어가기</div>
+    <div class="field">
+      <input id="joinCode" class="txt" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="방 코드 6자리" aria-label="방 코드">
+      <button class="btn teal" id="joinBtn">참가</button>
+    </div>
+    <div class="note" id="onNote"></div>
+    <div class="note err hidden" id="inApp">카카오톡 같은 앱 안의 브라우저에서는 연결이 막힐 수 있어요. 크롬이나 사파리로 열어 주세요.
+      <button class="btn ghost small" id="openExt" style="margin-top:6px">다른 브라우저로 열기</button></div>
+    <div class="row"><button class="btn ghost" id="onBack">메뉴로</button></div>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby" class="overlay hidden">
+  <div class="card">
+    <h2>대기실</h2>
+    <div class="codeline"><span class="codebig" id="lbCode"></span>
+      <button class="btn ghost small" id="copyCode">코드 복사</button><button class="btn ghost small" id="copyLink">초대 링크 복사</button></div>
+    <div class="note" id="lbNet"></div>
+    <div class="players">
+      <div class="pslot" id="slotH"></div>
+      <div class="pslot" id="slotG"></div>
+    </div>
+    <div class="label" id="rolesLabel">역할 고르기</div>
+    <div class="roles" id="rolesBox">
+      <button class="role r" id="pickRunner"><strong>도망자</strong><em id="whoRunner"></em></button>
+      <button class="role s" id="pickSeeker"><strong>술래</strong><em id="whoSeeker"></em></button>
+    </div>
+    <details open id="cfgBox">
+      <summary id="cfgSum">방 설정</summary>
+      <div class="cfg" id="cfgGrid"></div>
+    </details>
+    <div class="score" id="score"></div>
+    <div class="note" id="lbNote"></div>
+    <div class="row">
+      <button class="btn ghost" id="leaveBtn">나가기</button>
+      <button class="btn ghost hidden" id="shuffleBtn">역할 섞기</button>
+      <button class="btn ghost hidden" id="kickBtn">내보내기</button>
+      <button class="btn teal" id="mainBtn">준비</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="over" class="overlay hidden">
+  <div class="card" style="text-align:center">
+    <p class="result" id="resTitle"></p>
+    <p class="lead" id="resSub"></p>
+    <div class="stats" id="stats"></div>
+    <div class="row">
+      <button class="btn ghost" id="toMenu">메뉴로</button>
+      <button class="btn teal" id="again">다시 하기</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- VERSION -->
+<button id="ver" aria-label="버전 정보"></button>
+<div id="verPanel" class="hidden" role="dialog" aria-label="버전 정보">
+  <h3>업데이트 내역</h3>
+  <ul id="verList"></ul>
+  <div class="note" id="verNote"></div>
+  <div class="row"><button class="btn ghost small" id="verClose">닫기</button><button class="btn teal small" id="verCheck">업데이트 확인</button></div>
+</div>
+
+<!-- libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- optional three.js r128 add-ons: effects, rounded shapes, mesh merging (the game still runs if any fail to load) -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/FXAAShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@4.3.7/dist/mqtt.min.js"></script>
+<!-- game (order matters: later files use earlier ones) -->
+<script src="js/version.js"></script>
+<script src="js/core.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/prefs.js"></script>
+<script src="js/render.js"></script>
+<script src="js/world.js"></script>
+<script src="js/actors.js"></script>
+<script src="js/minimap.js"></script>
+<script src="js/game.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/relay.js"></script>
+<script src="js/net.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
