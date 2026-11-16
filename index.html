@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0d1117"><link rel="icon" href="data:,">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>모래 요새</title>
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">{"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/addons/"}}</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="menuShade"></div>
+<div id="bootErr"></div>
+
+<!-- 불러오기 -->
+<div id="loading" class="on"><div class="ld-box"><div class="logo small">모래 요새</div><div id="loadMsg">불러오는 중…</div><div class="bar"><i id="loadBar"></i></div></div></div>
+
+<!-- ============ 메인 ============ -->
+<section id="scr-main" class="scr">
+  <div class="main-wrap">
+    <header class="brand"><div class="logo">모래 요새</div><div class="sub">SAND FORTRESS · 1인칭 술래잡기 &amp; 배틀</div></header>
+    <nav class="main-modes">
+      <button class="big-card tag" id="goTag"><span class="kicker">N명 · 술래와 도망자</span><b>술래잡기</b><span class="desc">구슬을 모아 탈출하거나, 모두 잡아내거나</span></button>
+      <button class="big-card battle" id="goBattle"><span class="kicker">11개 모드 · 무기 32종</span><b>배틀</b><span class="desc">팀 데스매치부터 깃발 뺏기, 파쿠르까지</span></button>
+    </nav>
+    <div class="main-side">
+      <div class="profile panel"><label class="lbl">이름</label><input id="mName" maxlength="12" autocomplete="off"><div class="lvl"><span id="mLevel">레벨 1</span><div class="xpbar"><i id="mXp"></i></div></div></div>
+      <div class="panel join"><label class="lbl">온라인</label><button class="btn wide" id="goBrowse">방 찾기</button>
+        <div class="row"><input id="joinCode" placeholder="방 코드 5자리" maxlength="5" autocomplete="off"><button class="btn acc" id="joinBtn">참가</button></div></div>
+      <div class="row tools"><button class="btn" id="goLoadout">로드아웃</button><button class="btn" id="goSettings">설정</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 술래잡기 ============ -->
+<section id="scr-tag" class="scr">
+  <div class="hub">
+    <header class="hub-head"><button class="back" data-back>‹ 메인</button><h1>술래잡기</h1><p>도망자는 구슬을 모두 모아 술래 쪽 탈출문으로 빠져나가요. 술래는 앞쪽 60°만 보여요. 노란 구역에 들어간 도망자는 술래에게 드러나요. 잡힌 동료는 감옥에서 구출할 수 있어요.</p></header>
+    <div class="hub-grid">
+      <div class="panel">
+        <h3>혼자 연습 <small>빈자리는 봇이 채워요</small></h3>
+        <label class="lbl">맵</label><div class="map-pick" id="tMap"></div>
+        <label class="lbl">인원 <b id="tPlayersL"></b> <small id="tSeekL"></small></label><input type="range" id="tPlayers" min="2" max="16" value="6">
+        <div class="cols">
+          <div><label class="lbl">내 역할</label><div class="seg" id="tRole"><button data-v="any">무작위</button><button data-v="run">도망자</button><button data-v="seek">술래</button></div></div>
+          <div><label class="lbl">봇 난이도</label><div class="seg" id="tDiff"><button data-v="easy">쉬움</button><button data-v="normal">보통</button><button data-v="hard">어려움</button></div></div>
+        </div>
+        <div class="cols">
+          <div><label class="lbl">술래 총</label><div class="seg" id="tGun"><button data-v="0">없음</button><button data-v="1">있음</button></div></div>
+          <div><label class="lbl">제한 시간</label><div class="seg" id="tTime"><button data-v="6">6분</button><button data-v="10">10분</button><button data-v="15">15분</button></div></div>
+        </div>
+        <button class="btn acc big" id="tStart">연습 시작</button>
+      </div>
+      <div class="panel online">
+        <h3>친구와 온라인</h3>
+        <p class="muted">방을 만들면 코드가 나와요. 친구는 메인 화면에서 코드를 넣거나 방 찾기로 들어오면 돼요. 방장이 인원을 정하고, 남는 자리는 봇이 채워요.</p>
+        <button class="btn acc big" id="tCreate">방 만들기</button><button class="btn big" id="tBrowse">방 찾기</button>
+        <div class="rules"><b>술래 수</b> 7명까지 1명 · 8~14명 2명 · 15명부터 3명<br><b>조작</b> WASD 이동 · Space 점프 · C 앉기/슬라이딩 · E 길게 누르기(구슬·구출) · Q 레이더(술래)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 배틀 ============ -->
+<section id="scr-battle" class="scr">
+  <div class="hub">
+    <header class="hub-head"><button class="back" data-back>‹ 메인</button><h1>배틀</h1><p>로드아웃 3개를 만들어 두고 골라서 싸워요. 퍼크는 2칸, 같은 퍼크를 겹치면 효과가 두 배예요.</p></header>
+    <div class="hub-grid wide">
+      <div class="panel">
+        <h3>모드</h3><div class="mode-grid" id="bModes"></div>
+        <div class="cols3">
+          <div><label class="lbl">맵</label><div class="map-pick small" id="bMap"></div></div>
+          <div><label class="lbl">봇 <b id="bBotsL"></b></label><input type="range" id="bBots" min="0" max="15" value="7"><label class="lbl">봇 난이도</label><div class="seg" id="bDiff"><button data-v="easy">쉬움</button><button data-v="normal">보통</button><button data-v="hard">어려움</button></div></div>
+          <div><label class="lbl">로드아웃</label><div class="seg col" id="bLoad"></div><button class="btn small" id="bEditLoad">편집</button></div>
+        </div>
+        <button class="btn acc big" id="bStart">연습 시작</button>
+      </div>
+      <div class="panel online">
+        <h3>친구와 온라인</h3>
+        <p class="muted">방장이 모드·맵·인원을 정해요. 빈자리는 봇이 채울 수 있어요.</p>
+        <button class="btn acc big" id="bCreate">방 만들기</button><button class="btn big" id="bBrowse">방 찾기</button>
+        <div class="rules"><b>조작</b> 클릭 사격 · 우클릭 조준 · R 재장전 · 1/2/3 · Q 무기 바꾸기 · G 투척 · F 특수 · C 슬라이딩 · E 상호작용 · Tab 점수판 · V 감정표현</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 로드아웃 ============ -->
+<section id="scr-loadout" class="scr">
+  <div class="hub">
+    <header class="hub-head"><button class="back" data-back>‹ 뒤로</button><h1>로드아웃</h1><div class="tabs" id="loTabs"></div></header>
+    <div class="lo-grid">
+      <div class="panel lo-slots"><label class="lbl">이름</label><input id="loName" maxlength="10"><div id="loSlots"></div></div>
+      <div class="panel lo-pick"><h3 id="loPickT"></h3><div id="loPick"></div></div>
+      <div class="panel lo-stats" id="loStats"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 설정 ============ -->
+<section id="scr-settings" class="scr">
+  <div class="hub narrow">
+    <header class="hub-head"><button class="back" data-back>‹ 뒤로</button><h1>설정</h1></header>
+    <div class="panel settings">
+      <div class="set"><span>그래픽 품질</span><div class="seg" id="sGfx"><button data-v="low">낮음</button><button data-v="medium">보통</button><button data-v="high">높음</button><button data-v="ultra">최고</button></div></div>
+      <div class="set"><span>마우스·화면 감도 <b id="sSensL"></b></span><input type="range" id="sSens" min="0.2" max="3" step="0.05"></div>
+      <div class="set"><span>시야각 <b id="sFovL"></b></span><input type="range" id="sFov" min="65" max="100" step="1"></div>
+      <div class="set"><span>소리 크기 <b id="sVolL"></b></span><input type="range" id="sVol" min="0" max="1" step="0.05"></div>
+      <div class="set"><span>소리</span><div class="seg" id="sSound"><button data-v="1">켜기</button><button data-v="0">끄기</button></div></div>
+      <div class="set"><span>조작</span><div class="seg" id="sCtrl"><button data-v="auto">자동</button><button data-v="kb">키보드·마우스</button><button data-v="touch">터치</button></div></div>
+      <div class="set"><span>세로 반전</span><div class="seg" id="sInv"><button data-v="0">끄기</button><button data-v="1">켜기</button></div></div>
+      <div class="set"><span>FPS 표시</span><div class="seg" id="sFps"><button data-v="0">끄기</button><button data-v="1">켜기</button></div></div>
+      <div class="set"><span>조준선 색</span><div class="seg" id="sCross"><button data-v="#ffffff">흰색</button><button data-v="#4dff88">초록</button><button data-v="#ffe14d">노랑</button><button data-v="#ff4dd2">분홍</button></div></div>
+      <p class="muted small">그래픽 출처: Poly Haven(CC0) 질감·HDRI·소품, Quaternius 캐릭터(CC0). 총소리: Free Firearm Sound Library(CC0). 자세한 내용은 CREDITS.md.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 방 찾기 ============ -->
+<section id="scr-browse" class="scr">
+  <div class="hub narrow">
+    <header class="hub-head"><button class="back" data-back>‹ 뒤로</button><h1>방 찾기</h1></header>
+    <div class="panel"><div class="row"><input id="brCode" placeholder="방 코드 5자리" maxlength="5"><button class="btn acc" id="brJoin">참가</button><button class="btn" id="brRefresh">새로고침</button></div>
+      <div id="brList" class="br-list"><p class="muted">열린 방을 찾는 중…</p></div></div>
+  </div>
+</section>
+
+<!-- ============ 대기실 ============ -->
+<section id="scr-lobby" class="scr">
+  <div class="hub">
+    <header class="hub-head lobby-head"><button class="back" id="lbLeave">‹ 나가기</button><div><h1 id="lbTitle">대기실</h1><p id="lbSub"></p></div>
+      <div class="code-box"><span class="lbl">방 코드</span><b id="lbCode">-----</b><div class="row"><button class="btn small" id="lbCopy">코드 복사</button><button class="btn small" id="lbShare">링크 공유</button></div></div></header>
+    <div class="lobby-grid">
+      <div class="panel"><h3>플레이어 <small id="lbCount"></small></h3><div id="lbPlayers"></div><div id="lbMine" class="mine"></div></div>
+      <div class="panel"><h3>방 설정 <small id="lbHostNote"></small></h3><div id="lbSettings"></div></div>
+      <div class="panel chat"><h3>채팅</h3><div id="lbChatLog" class="chatlog"></div><div class="row"><input id="lbChatIn" maxlength="80" placeholder="메시지"><button class="btn" id="lbChatSend">보내기</button></div></div>
+    </div>
+    <div class="lobby-foot"><button class="btn big" id="lbReady">준비</button><button class="btn acc big" id="lbStart">게임 시작</button></div>
+  </div>
+</section>
+
+<!-- ============ 게임 ============ -->
+<section id="scr-game" class="scr">
+  <div id="hud">
+    <div id="hSeekVig"></div><div id="hDmg"></div><div id="hFlash"></div><div id="hScope"><i></i></div><div id="hBlind"></div>
+    <div id="hTop"><div class="sc a"><b id="hScoreA">0</b><span id="hNameA"></span></div><div class="mid"><div id="hTime">--:--</div><div id="hObj"></div></div><div class="sc b"><span id="hNameB"></span><b id="hScoreB">0</b></div></div>
+    <div id="hBars"></div>
+    <div id="hFeed"></div>
+    <canvas id="hMini" width="220" height="220"></canvas>
+    <div id="hTagInfo"></div>
+    <div id="hCross"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="d"></i></div>
+    <div id="hHit"><i></i><i></i><i></i><i></i></div>
+    <div id="hDir"></div>
+    <div id="hHold"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" class="bg"/><circle cx="22" cy="22" r="18" class="fg" id="hHoldC"/></svg><span id="hHoldL"></span></div>
+    <div id="hPrompt"></div>
+    <div id="hMsg"><b id="hMsgB"></b><span id="hMsgS"></span></div>
+    <div id="hToast"></div>
+    <div id="hHp"><div class="hp-num"><b id="hHpNum">100</b><span>HP</span></div><div class="hp-bar"><i id="hHpBar"></i></div><div id="hStatus"></div></div>
+    <div id="hWeap"><div id="hWName"></div><div class="ammo"><b id="hAmmo">--</b><span id="hRes"></span></div><div id="hSlots"></div><div class="gear"><span id="hThr"></span><span id="hSpec"></span></div></div>
+    <div id="hDead"><b id="hDeadB"></b><span id="hDeadS"></span></div>
+    <div id="hBoard"></div>
+    <div id="hChat"><div id="hChatLog"></div><input id="hChatIn" maxlength="80" placeholder="Enter로 보내기, Esc로 닫기"></div>
+    <div id="hFps"></div>
+    <div id="hClick">화면을 클릭하면 조작을 시작해요</div>
+  </div>
+  <div id="touch">
+    <div id="joy"><i id="joyKnob"></i></div><div id="lookPad"></div>
+    <button data-btn="fire" class="tb fire">발사</button><button data-btn="ads" class="tb ads">조준</button><button data-btn="jump" class="tb jump">점프</button>
+    <button data-btn="crouch" class="tb crouch">앉기</button><button data-btn="reload" class="tb reload">장전</button><button data-btn="use" class="tb use">줍기</button>
+    <button data-btn="throw" class="tb throw">투척</button><button data-btn="special" class="tb special">특수</button><button data-btn="swap" class="tb swap">무기</button>
+    <button data-btn="radar" class="tb radar">레이더</button><button class="tb menu" id="tPause">Ⅱ</button><button class="tb board" id="tBoard">점수</button>
+  </div>
+  <div id="pause" class="overlay"><div class="panel ov-box"><h2>일시 정지</h2><button class="btn acc big" id="pResume">계속하기</button><button class="btn big" id="pSettings">설정</button><button class="btn big danger" id="pQuit">나가기</button></div></div>
+  <div id="result" class="overlay"><div class="panel ov-box res"><h2 id="rTitle"></h2><p id="rSub"></p><div id="rBoard"></div><p id="rXp" class="muted"></p><div class="row"><button class="btn acc big" id="rAgain">다시 하기</button><button class="btn big" id="rMain">메인으로</button></div></div></div>
+</section>
+
+<div id="ver"></div>
+<div id="toastG"></div>
+<script type="module" src="js/boot.js"></script>
+</body>
+</html>

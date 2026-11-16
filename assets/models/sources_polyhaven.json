@@ -1,0 +1,302 @@
+{
+ "barrel_rust": {
+  "id": "Barrel_01",
+  "name": "Barrel_01",
+  "authors": {
+   "Jorge Camacho": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "barrel_blue": {
+  "id": "Barrel_02",
+  "name": "Barrel 02",
+  "authors": {
+   "Jorge Camacho": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "crate_wood": {
+  "id": "wooden_crate_01",
+  "name": "Wooden Crate 01",
+  "authors": {
+   "James Ray Cock": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "crate_wood2": {
+  "id": "wooden_crate_02",
+  "name": "Wooden Crate 02",
+  "authors": {
+   "James Ray Cock": "modeling",
+   "Jurita Burger": "graphic design"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "cardboard": {
+  "id": "cardboard_box_01",
+  "name": "Cardboard Box 01",
+  "authors": {
+   "Rahul Chaudhary": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "barrier": {
+  "id": "concrete_road_barrier",
+  "name": "Concrete Road Barrier",
+  "authors": {
+   "Amal Kumar": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "barrier2": {
+  "id": "concrete_road_barrier_02",
+  "name": "Concrete Road Barrier 02",
+  "authors": {
+   "Amal Kumar": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "lamp_street": {
+  "id": "street_lamp_01",
+  "name": "Street Lamp 01",
+  "authors": {
+   "Josh Dean": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "lamp_modern": {
+  "id": "street_lamp_02",
+  "name": "Street Lamp 02",
+  "authors": {
+   "Josh Dean": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "trash_can": {
+  "id": "metal_trash_can",
+  "name": "Metal Trash Can",
+  "authors": {
+   "GurJas Studios": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "hydrant": {
+  "id": "fire_hydrant",
+  "name": "Fire Hydrant",
+  "authors": {
+   "Gonçalo Felício": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "generator": {
+  "id": "portable_generator",
+  "name": "Portable Generator",
+  "authors": {
+   "James Ray Cock": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "propane": {
+  "id": "propane_tank",
+  "name": "Propane Tank",
+  "authors": {
+   "Slinc": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "shelves": {
+  "id": "steel_frame_shelves_01",
+  "name": "Steel Frame Shelves 01",
+  "authors": {
+   "James Ray Cock": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "boulder_a": {
+  "id": "namaqualand_boulder_02",
+  "name": "Namaqualand Boulder 02",
+  "authors": {
+   "Greg Zaal": "Photography",
+   "Rico Cilliers": "modeling"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "boulder_b": {
+  "id": "namaqualand_boulder_03",
+  "name": "Namaqualand Boulder 03",
+  "authors": {
+   "Jenelle van Heerden": "modeling",
+   "Dario Barresi": "Photography"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "boulder_c": {
+  "id": "boulder_01",
+  "name": "Boulder 01",
+  "authors": {
+   "Rico Cilliers": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "potted_plant": {
+  "id": "potted_plant_02",
+  "name": "Potted Plant 02",
+  "authors": {
+   "Rico Cilliers": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "pipes": {
+  "id": "modular_industrial_pipes_01",
+  "name": "Modular Industrial Pipes 01",
+  "authors": {
+   "Jorge Camacho": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "security_light": {
+  "id": "security_light",
+  "name": "Security Light",
+  "authors": {
+   "Maximilian Schuster": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "utility_box": {
+  "id": "utility_box_01",
+  "name": "Utility Box 01",
+  "authors": {
+   "James Ray Cock": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "storage_cart": {
+  "id": "industrial_storage_cart",
+  "name": "Industrial Storage Cart",
+  "authors": {
+   "Jule Bielitz": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "mil_crate": {
+  "id": "old_military_crate",
+  "name": "Old Military Crate",
+  "authors": {
+   "Jack Mava": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "ammo_box": {
+  "id": "ammo_box",
+  "name": "Ammo Box",
+  "authors": {
+   "DanKit": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "jerrycan": {
+  "id": "metal_jerrycan",
+  "name": "Metal Jerrycan",
+  "authors": {
+   "Sean Buckley": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "shrub": {
+  "id": "shrub_sorrel_01",
+  "name": "Shrub Sorrel 01",
+  "authors": {
+   "Rico Cilliers": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "wall_lamp": {
+  "id": "industrial_wall_lamp",
+  "name": "Industrial Wall Lamp",
+  "authors": {
+   "Kuutti Siitonen": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "manhole": {
+  "id": "water_manhole_cover",
+  "name": "Water Manhole Cover",
+  "authors": {
+   "Raunox": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "lpg_tank": {
+  "id": "small_lpg_tank",
+  "name": "Small Lpg Tank",
+  "authors": {
+   "Ulan Cabanilla": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "hand_truck": {
+  "id": "hand_truck",
+  "name": "Hand Truck",
+  "authors": {
+   "Mutanzom3D": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "tool_cart": {
+  "id": "tool_cart",
+  "name": "Tool Cart",
+  "authors": {
+   "Savva Zakharov": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "plastic_crate": {
+  "id": "plastic_crate_02",
+  "name": "Plastic Crate 02",
+  "authors": {
+   "Fabi_G": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ },
+ "airduct": {
+  "id": "modular_airduct_rectangular_01",
+  "name": "Modular Airduct Rectangular 01",
+  "authors": {
+   "James Ray Cock": "All"
+  },
+  "license": "CC0",
+  "source": "Poly Haven"
+ }
+}

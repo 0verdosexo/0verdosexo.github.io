@@ -1,0 +1,35 @@
+{
+ "desert": {
+  "id": "goegap",
+  "name": "Goegap",
+  "authors": {
+   "Greg Zaal": "All"
+  },
+  "license": "CC0"
+ },
+ "plaza": {
+  "id": "kloofendal_48d_partly_cloudy_puresky",
+  "name": "Kloofendal 48d Partly Cloudy (Pure Sky)",
+  "authors": {
+   "Greg Zaal": "Original",
+   "Jarod Guest": "Sky edits"
+  },
+  "license": "CC0"
+ },
+ "cyber": {
+  "id": "shanghai_bund",
+  "name": "Shanghai Bund",
+  "authors": {
+   "Greg Zaal": "All"
+  },
+  "license": "CC0"
+ },
+ "factory": {
+  "id": "factory_yard",
+  "name": "Factory Yard",
+  "authors": {
+   "Sergej Majboroda": "All"
+  },
+  "license": "CC0"
+ }
+}
