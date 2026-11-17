@@ -11,24 +11,57 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
     Object.assign(Game,{active:true,kind:S.kind,mode:S.kind==='tag'?'tag':S.mode,mapId:S.map,cfg:Object.assign({},S.cfg||{}),host:!!S.host,online:!!S.online,myId:S.myId,seed:S.seed||1,
       t:0,state:'loading',stateT:0,projs:[],deps:[],actors:[],byId:new Map(),me:null,freeze:true,paused:false,spectate:null,result:null,round:0});
     Game.teamMode=S.kind==='tag'?false:!!BMODES[S.mode].team;
-    UI.showLoading(true,'맵 불러오는 중…');
+    /* loading screen: picture of the chosen map behind, percent in the corner */
+    UI.loadBg(S.map); UI.showLoading(true,'맵 불러오는 중…'); UI.loadPct(2); await new Promise(r=>setTimeout(r,30));
     const def=SandTag.maps[S.map]; setMapData(def,{mode:Game.mode}); SMOKES.length=0;
-    const th=THEMES[def.theme]; await R.setTheme(th); await World.build(def,th); FX.init(); await Avatars.init();
-    for(let i=0;i<120&&Assets.done<Assets.pending;i++){ UI.showLoading(true,`질감 불러오는 중… ${Assets.done}/${Assets.pending}`); await new Promise(r=>setTimeout(r,100)); }
+    const th=THEMES[def.theme]; await R.setTheme(th); UI.loadPct(14); await new Promise(r=>setTimeout(r,0)); await World.build(def,th); FX.init(); UI.loadPct(46); await Avatars.init(); UI.loadPct(50);
+    for(let i=0;i<120&&Assets.done<Assets.pending;i++){ UI.showLoading(true,`질감 불러오는 중… ${Assets.done}/${Assets.pending}`); UI.loadPct(50+28*Assets.done/Math.max(1,Assets.pending)); await new Promise(r=>setTimeout(r,100)); }
+    UI.loadPct(78);
     /* actors */
     for(const p of S.players){ const a=newActor({id:p.id,name:p.name,bot:!!p.bot,owner:p.owner,team:p.team||0,load:p.load||null,pref:p.pref||null,diff:p.diff||Game.cfg.diff||'normal',color:p.color});
-      a.local=p.owner===Game.myId; Game.actors.push(a); Game.byId.set(a.id,a); if(a.id===S.meId) Game.me=a; }
+      a.local=p.owner===Game.myId; a.ch=p.ch; Game.actors.push(a); Game.byId.set(a.id,a); if(a.id===S.meId) Game.me=a; }
     if(Game.kind==='tag') Tag.init(S); else Modes.init(S);
-    for(const a of Game.actors){ a.color=colorOf(a); if(a!==Game.me){ a.av=Avatars.create({color:a.color,name:a.name,tagColor:tagColorOf(a)}); R.scene.add(a.av.root); a.av.root.visible=false; } }
+    for(const a of Game.actors){ a.color=colorOf(a); if(a!==Game.me){ a.av=Avatars.create({color:a.color,look:lookOf(a),name:a.name,tagColor:tagColorOf(a)}); R.scene.add(a.av.root); a.av.root.visible=false; } }
     for(const a of Game.actors) if(a.local) spawn(a,true);
+    UI.loadPct(82); await warmUp();
+    UI.loadPct(100); await new Promise(r=>setTimeout(r,120));
     UI.showLoading(false); UI.show('game'); HUD.start(); Sfx.ambience(def.theme);
     Game.state='pre'; Game.stateT=3; Game.freeze=true; Input.setEnabled(true); if(!isTouch) Input.requestLock();
     last=performance.now(); if(!Game._noLoop) raf=requestAnimationFrame(loop);
   };
+  /* build, upload and compile everything that would otherwise first appear mid-match (gun models, deployables, textures, shaders) */
+  async function warmUp(){ if(Game._noLoop&&new URLSearchParams(location.search).get('norender')) return; try{
+    UI.showLoading(true,'그래픽 준비 중…'); await new Promise(r=>setTimeout(r,0));
+    const tmp=new THREE.Group(), built=new Set(); const want=(id,att)=>{ if(!id||!WPN[id]) return; const k=id+'|'+attKey(attClean(id,att)); if(built.has(k)) return; built.add(k); try{ tmp.add(Guns.tp(id,att)); }catch(e){} };
+    const me=Game.me, pvp=Game.kind==='battle'&&Game.mode!=='gg'&&Game.mode!=='pk';
+    for(const a of Game.actors){ const L=a.load; if(L&&pvp&&a!==me) for(const k of ['main','side','melee']) want(L[k],attOf(a,L[k])); }
+    if(Game.mode==='gg'&&typeof GG_LADDER!=='undefined') for(const w of GG_LADDER) want(w,null);
+    if(Game.kind==='tag') want('p1912',null);
+    R.scene.add(tmp);
+    if(me) for(const sl of me.slots||[]){ try{ getVM(sl.id,sl.att); }catch(e){} }
+    if(Game.kind==='tag'&&me&&me.role==='seek') try{ getVM('tagpistol'); }catch(e){}
+    for(const v of VMC.values()) R.vmCam.add(v.group);
+    if(Game.kind==='battle') World.addDynObj({x0:-900,x1:-899,z0:-900,z1:-899.5,y0:-80,y1:-78,k:'wallDep',oid:'__warm'});
+    UI.loadPct(88); for(let i=0;i<60&&Assets.done<Assets.pending;i++) await new Promise(r=>setTimeout(r,100));
+    UI.loadPct(91); await new Promise(r=>setTimeout(r,0));
+    const r=R.renderer, seen=new Set();
+    const up=o=>{ const ms=o.material?(Array.isArray(o.material)?o.material:[o.material]):[]; for(const m of ms) for(const k of ['map','normalMap','roughnessMap','metalnessMap','aoMap','emissiveMap','alphaMap']){ const t=m[k]; if(t&&t.image&&!seen.has(t)){ seen.add(t); try{ r.initTexture(t); }catch(e){} } } };
+    R.scene.traverse(up); R.vmScene.traverse(up);
+    /* hidden things (avatars before spawn, effects, zones) are skipped by compile, so show everything for one frame under the loading screen */
+    const hid=[]; const showAll=o=>{ if(!o.visible){ hid.push(o); o.visible=true; } }; R.scene.traverse(showAll); R.vmScene.traverse(showAll);
+    await R.precompile(); r.shadowMap.needsUpdate=true; const au=r.shadowMap.autoUpdate; r.shadowMap.autoUpdate=true; R.render(); r.shadowMap.autoUpdate=au;
+    for(const o of hid) o.visible=false;
+    R.scene.remove(tmp); for(const v of VMC.values()) R.vmCam.remove(v.group); if(Game.kind==='battle') World.removeDyn('__warm');
+  }catch(e){ console.warn('warm-up',e); } }
   Game.stop=function(silent){ cancelAnimationFrame(raf); if(!Game.active) return; Game.active=false; Input.setEnabled(false); Input.exitLock(); Sfx.stopAmbience();
     for(const a of Game.actors) if(a.av) a.av.dispose(); for(const P of Game.projs) if(P.mesh) R.scene.remove(P.mesh); for(const D of Game.deps) if(D.mesh) R.scene.remove(D.mesh);
     if(vm){ R.vmCam.remove(vm.group); vm=null; vmId=null; } if(Game.kind==='tag') Tag.cleanup(); else Modes.cleanup(); FX.clear(); HUD.stop(); };
   function colorOf(a){ if(Game.kind==='tag') return a.role==='seek'?'#ff4d3d':'#3d8bff'; return Game.teamMode?TEAM_COLORS[a.team]:FFA_COLORS[Game.actors.indexOf(a)%FFA_COLORS.length]; }
+  /* which outfit: 0 = black SWAT operator, 1 = balaclava / grey top / olive trousers. One per team (tag: seekers are the SWAT side; free-for-all alternates). */
+  function lookOf(a){ if(!a) return 0; if(Game.kind==='tag') return a.role==='seek'?0:1; const mine=prefs.char?1:0;
+    /* offline team games: my team wears the operator I picked in the lobby, the other team wears the other one. Online the outfit follows the team so everyone sees the same thing. */
+    if(Game.teamMode) return Game.online||!Game.me?(a.team===1?1:0):(a.team===Game.me.team?mine:1-mine);
+    return a===Game.me?mine:a.ch!=null?(a.ch?1:0):Game.actors.indexOf(a)%2; }
   function tagColorOf(a){ if(!Game.me) return '#fff'; if(Game.kind==='tag') return a.role==='seek'?'#ff8a7a':'#9cc8ff'; return isEnemy(Game.me,a)?'#ff8a7a':'#9cc8ff'; }
   Game.colorOf=colorOf;
   /* ---------- spawn ---------- */
@@ -74,15 +107,16 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
   function onShot(d){ const a=Game.byId.get(d.a); const w=WPN[d.w]; if(!w) return;
     const local=a&&a.local&&!a.bot; let o=d.o;
     if(local&&vm&&vm.gun){ const p=new THREE.Vector3().copy(vm.gun.userData.muzzle); vm.gun.localToWorld(p); /* vm space → world approx */ }
-    if(!local){ if(a&&a.av){ a.av.play('Pistol_Shoot',1.6); } Sfx.play(w.snd,{x:o[0],y:o[1],z:o[2],rate:w.sndRate,dist:w.silent?25:(perkN(a&&a.load,'ghost')?60:130),vol:perkN(a&&a.load,'ghost')?0.6:1}); FX.muzzle(o[0],o[1],o[2],0,0,0,w.cat==='sg'||w.cat==='sr'); }
-    else { Sfx.play(w.snd,{rate:w.sndRate,vol:perkN(a.load,'ghost')?0.6:0.9}); if(w.smokePuff) FX.puff(o[0],o[1],o[2],{size:1.2,life:2,alpha:0.5,grow:3});
+    const sup=!!d.sl;
+    if(!local){ if(a&&a.av){ a.av.play('Pistol_Shoot',1.6); } Sfx.play(w.snd,{x:o[0],y:o[1],z:o[2],rate:w.sndRate*(sup?1.35:1),dist:w.silent||sup?28:(perkN(a&&a.load,'ghost')?60:130),vol:sup?0.45:perkN(a&&a.load,'ghost')?0.6:1}); if(!sup) FX.muzzle(o[0],o[1],o[2],0,0,0,w.cat==='sg'||w.cat==='sr'); }
+    else { Sfx.play(w.snd,{rate:w.sndRate*(sup?1.35:1),vol:sup?0.4:perkN(a.load,'ghost')?0.6:0.9}); if(w.smokePuff) FX.puff(o[0],o[1],o[2],{size:1.2,life:2,alpha:0.5,grow:3});
       if(a&&w.cat!=='sg'&&!w.proj&&w.id!=='revolver'){ const r={x:Math.cos(a.yaw),z:-Math.sin(a.yaw)}, f=fwd(a.yaw); FX.casing(a.x+r.x*0.25+f.x*0.35,eyeY(a)-0.18,a.z+r.z*0.25+f.z*0.35,r.x*rand(2,3)+a.vx,rand(2,3.5),r.z*rand(2,3)+a.vz,w.cat==='sr'); } }
     for(const e of d.e){ const dx=e[0]-o[0], dy=e[1]-o[1], dz=e[2]-o[2], L=Math.hypot(dx,dy,dz)||1;
       if(w.pellets===1||Math.random()<0.35) FX.tracer(o[0]+dx/L*(local?1.2:0.3),o[1]+dy/L*(local?1.2:0.3),o[2]+dz/L*(local?1.2:0.3),e[0],e[1],e[2]);
       if(e[3]===1||e[3]===2||e[3]===3){ const n=hitNormal(e[0],e[1],e[2],{x:dx/L,y:dy/L,z:dz/L}); FX.impact(e[0]+n.x*0.02,e[1]+n.y*0.02,e[2]+n.z*0.02,n.x,n.y,n.z,e[3]===3?'metal':e[3]===2?'wood':e[1]<0.05?'sand':'concrete');
         if(Math.random()<0.3) Sfx.play(e[3]===3?'metal_04':'hit_0'+(1+((Math.random()*3)|0)),{x:e[0],y:e[1],z:e[2],vol:0.25,dist:25,rate:rand(1.2,1.6)}); }
       if(a&&!local&&Math.random()<0.5){ /* whiz near me */ const me=Game.me; if(me&&me.alive){ const t=((me.x-o[0])*dx+(eyeY(me)-o[1])*dy+(me.z-o[2])*dz)/(L*L); if(t>0&&t<1){ const px=o[0]+dx*t-me.x, pz=o[2]+dz*t-me.z; if(Math.hypot(px,pz)<2) Sfx.play('whoosh',{vol:0.25,rate:2.2}); } } } }
-    if(a&&!local&&Game.me&&isEnemy(Game.me,a)) a.revealT=perkN(a.load,'ghost')?a.revealT:Game.t+1.6;
+    if(a&&!local&&Game.me&&isEnemy(Game.me,a)) a.revealT=perkN(a.load,'ghost')?a.revealT:Game.t+(sup?0.5:1.6);
   }
   function onHit(d){ const v=Game.byId.get(d.v), a=Game.byId.get(d.a); if(!v) return;
     if(v.local&&v.alive){ const before=v.hp; const got=damage(v,{dmg:d.d,from:d.a,w:d.w,head:!!d.h});
@@ -94,8 +128,8 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
     if(d.m) Sfx.play(WPN[d.w]&&WPN[d.w].shield?'slam_01':'hit_0'+(1+((Math.random()*3)|0)),{x:v.x,y:v.y+1,z:v.z,vol:0.7});
   }
   function onSpawn(d){ const a=Game.byId.get(d.a); if(!a) return; if(!a.local){ a.x=d.x; a.y=d.y; a.z=d.z; a.yaw=d.yaw; a.alive=true; a.hp=d.hp||100; a.maxHp=d.hp||100; a.jailed=false; a.net={x:d.x,y:d.y,z:d.z,yaw:d.yaw,pitch:0,f:1,w:d.w,t:Game.t}; }
-    if(a.av){ a.av.revive(); a.av.root.visible=true; a.av.setGun(d.w&&Game.kind==='battle'?d.w:(d.w==='tagpistol'?'p1912':null)); } }
-  function onAct(d){ const a=Game.byId.get(d.a); if(!a) return; if(d.t==='sw'&&!a.local){ if(a.av) a.av.setGun(d.w==='tagpistol'?'p1912':d.w); a.curW=d.w; }
+    if(a.av){ a.av.revive(); a.av.root.visible=true; const id=d.w&&Game.kind==='battle'?d.w:(d.w==='tagpistol'?'p1912':null); a.av.setGun(id,attOf(a,id)); } }
+  function onAct(d){ const a=Game.byId.get(d.a); if(!a) return; if(d.t==='sw'&&!a.local){ if(a.av){ const id=d.w==='tagpistol'?'p1912':d.w; a.av.setGun(id,attOf(a,id)); } a.curW=d.w; }
     if(!a.av||a.local) return; if(d.t==='reload') a.av.play('Pistol_Reload',1.2); if(d.t==='melee') a.av.play('Sword_Attack',1.6); if(d.t==='throw') a.av.play('Punch_Cross',1.3); }
   function onObjDmg(d){ const o=OBJS.get(d.o); if(!o||!o.alive) return; o.hp-=d.d; if(o.hp<=0&&Game.host){ Game.emit('objbrk',{o:d.o,a:d.a}); } }
   function onObjBreak(d){ const o=OBJS.get(d.o); if(!o||!o.alive) return; o.alive=false; o.hp=0; o.s.alive=false;
@@ -112,14 +146,22 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
       a.net={x:s[1],y:s[2],z:s[3],yaw:s[4],pitch:s[5],f:s[6],w:s[7],t:Game.t}; a.hp=s[8]; if(s[9]) a.revealT=Game.t+1.6;
       const al=!!(s[6]&1); if(al&&!a.alive&&a.deadT>0.5){ a.alive=true; if(a.av) a.av.revive(); }
       a.jailed=!!(s[6]&32); a.escaped=!!(s[6]&64);
-      if(a.av&&s[7]!==a.curW){ a.curW=s[7]; a.av.setGun(s[7]==='tagpistol'?'p1912':s[7]||null); } } }
+      if(a.av&&s[7]!==a.curW){ a.curW=s[7]; const id=s[7]==='tagpistol'?'p1912':s[7]||null; a.av.setGun(id,attOf(a,id)); } } }
   function sendStates(){ const own=Game.actors.filter(a=>a.local); if(!own.length) return; Net.send('state',{s:own.map(packState)},true); }
   function interpRemote(a,dt){ const n=a.net; if(!n) return; const k=Math.min(1,dt*14);
     if(Math.hypot(n.x-a.x,n.z-a.z)>6){ a.x=n.x; a.y=n.y; a.z=n.z; } else { a.x+=(n.x-a.x)*k; a.y+=(n.y-a.y)*k; a.z+=(n.z-a.z)*k; }
     a.yaw+=angDiff(a.yaw,n.yaw)*k; a.pitch+=(n.pitch-a.pitch)*k; a.crouch=!!(n.f&2); a.slideT=n.f&4?0.3:0; a.ads=!!(n.f&8); a.gr=!!(n.f&16); a.ph=a.slideT>0?PH_SLIDE:a.crouch?CROUCH_H:PH; a.emote=n.f&256?Game.t+1:0; }
   /* ---------- main loop ---------- */
   function loop(now){
-    raf=requestAnimationFrame(loop); let dt=Math.min(0.05,(now-last)/1000); last=now; if(!Game.active) return; step(dt,true); }
+    raf=requestAnimationFrame(loop); const raw=(now-last)/1000; let dt=Math.min(0.05,raw); last=now; if(!Game.active){ aq.t=0; aq.n=0; aq.cool=4; return; } step(dt,true); autoQ(raw); }
+  /* auto quality: if the frame rate stays low, step the graphics preset down one level */
+  const aq={t:0,n:0,sum:0,cool:4};
+  function autoQ(raw){ if(prefs.gfxAuto===false||document.hidden||raw>2) return;
+    if(aq.cool>0){ aq.cool-=raw; return; }
+    aq.t+=raw; aq.n++; if(aq.t<3) return; const fps=aq.n/aq.t; aq.t=0; aq.n=0;
+    const order=['ultra','high','medium','low'], i=order.indexOf(prefs.gfx);
+    if(fps<42&&i>=0&&i<order.length-1){ prefs.gfx=order[i+1]; savePrefs(); R.applyQuality(QUALITY_PRESETS[prefs.gfx]); aq.cool=5;
+      HUD.toast('화면이 버벅여서 그래픽을 '+QUALITY_PRESETS[prefs.gfx].name+'(으)로 낮췄어요'); } }
   Game._step=(dt,render)=>step(dt,render);
   Game._noLoop=false;
   function step(dt,render){ frameN++;
@@ -128,6 +170,7 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
     if(Game.state==='pre'){ Game.stateT-=dt; Game.freeze=true; if(Game.stateT<=0){ Game.state='live'; Game.freeze=false; Sfx.play('beep'); Bus.emit('go'); } }
     const me=Game.me; let I=NOINTENT;
     if(!Game.paused&&!chatOpen&&!UI.overlayOpen()) I=Input.sample(); else Input.sample();
+    if(I!==NOINTENT&&me&&!me.bot&&me.alive&&Game.state==='live'&&!Game.freeze&&autoFireOn()&&autoTarget(me)) I.fire=true;
     lastI=I;
     if(me&&!me.bot){ applyLook(me,I,dt);
       if(me.alive){ moveActor(me,I,dt); if(Game.state!=='end'&&!Game.freeze){ weaponUpdate(me,I,dt); } else if(Game.freeze&&me.recoilP>0){ me.recoilP=0; } }
@@ -162,6 +205,18 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
     me.yaw-=I.lookX*z*st; me.pitch=clamp(me.pitch-I.lookY*z*st,-1.45,1.45); swayX+=I.lookX*0.6; swayY+=I.lookY*0.6; }
   Bus.on('shake',e=>{ const me=Game.me; if(!me) return; const d=Math.hypot(e.x-me.x,e.z-me.z); shake=Math.max(shake,Math.max(0,1-d/(e.r*4))*0.6); });
   Bus.on('hurt',e=>{ shake=Math.max(shake,0.12); });
+  /* ---------- touch auto-fire: shoot when the crosshair rests on a visible enemy ---------- */
+  function autoFireOn(){ return prefs.autoFire!==false&&document.body.classList.contains('touch'); }
+  function autoTarget(me){ const w=curW(me); if(!w||me.tool) return null;
+    const tagGun=Game.kind==='tag'&&me.role==='seek'&&Game.cfg.seekerGun; if(Game.kind!=='battle'&&!tagGun) return null;
+    const cp=Math.cos(me.pitch), fx=-Math.sin(me.yaw)*cp, fy=Math.sin(me.pitch), fz=-Math.cos(me.yaw)*cp;
+    const ex=me.x, ey=eyeY(me), ez=me.z, range=w.mode==='melee'?(w.reach||2)+0.6:(w.far||60);
+    for(const a of Game.actors){ if(a===me||!a.alive) continue;
+      if(tagGun){ if(a.role!=='run'||a.jailed||a.escaped) continue; } else if(!isEnemy(me,a)||a.spawnProt>0) continue;
+      for(const hy of [a.ph*0.62,a.ph-0.2]){ const dx=a.x-ex, dy=a.y+hy-ey, dz=a.z-ez, d=Math.hypot(dx,dy,dz); if(d>range||d<0.01) continue;
+        const cos=(dx*fx+dy*fy+dz*fz)/d, tol=w.mode==='melee'?0.45:Math.atan(0.42/d)+0.004;
+        if(cos<Math.cos(tol)) continue; if(losSight(ex,ey,ez,a.x,a.y+hy,a.z)) return a; } }
+    return null; }
   /* ---------- camera ---------- */
   function updateCamera(me,dt,I){
     const cam=R.camera; if(!me){ return; }
@@ -183,9 +238,12 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
     if(Math.abs(cam.fov-tf)>0.05){ cam.fov=lerp(cam.fov,tf,Math.min(1,dt*14)); cam.updateProjectionMatrix(); }
   }
   /* ---------- third-person avatars ---------- */
-  function updateAvatars(dt){ const me=Game.me; const cp=R.camera.position;
+  const _frus=new THREE.Frustum(), _pm=new THREE.Matrix4(), _sph=new THREE.Sphere(new THREE.Vector3(),1.6);
+  function updateAvatars(dt){ const me=Game.me; const cam=R.camera, cp=cam.position; _frus.setFromProjectionMatrix(_pm.multiplyMatrices(cam.projectionMatrix,cam.matrixWorldInverse));
     for(const a of Game.actors){ if(!a.av) continue; const A=a.av;
-      const dist=Math.hypot(a.x-cp.x,a.z-cp.z); const skip=dist>70?5:dist>35?2:0; a.avAcc=(a.avAcc||0)+dt; a.avN=(a.avN||0)+1;
+      const dist=Math.hypot(a.x-cp.x,a.z-cp.z); _sph.center.set(a.x,a.y+1,a.z); const onScreen=_frus.intersectsSphere(_sph);
+      const skip=!onScreen&&dist>6?6:dist>70?5:dist>35?2:0;
+      const sh=dist<26; if(A._sh!==sh){ A._sh=sh; A.root.traverse(o=>{ if(o.isMesh) o.castShadow=sh; }); } a.avAcc=(a.avAcc||0)+dt; a.avN=(a.avN||0)+1;
       let vis=a.alive||a.deadT<4; if(a.escaped) vis=false;
       if(Game.kind==='tag'&&me&&me.role==='seek'&&a.role==='run'&&a.alive) vis=vis&&Tag.seekerSees(me,a);
       A.root.visible=vis; if(!vis) continue;
@@ -200,13 +258,15 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
     if(!me) return; let id=null; const s=curSlot(me);
     if(me.alive&&!Game.paused){ if(me.tool) id='repair'; else if(me.carry==='drive') id='knife'; else if(s) id=s.id; }
     if(Game.kind==='tag'&&!(me.role==='seek'&&Game.cfg.seekerGun)) id=null;
-    if(id!==vmId){ if(vm){ R.vmCam.remove(vm.group); } vm=id?Guns.viewmodel(id):null; vmId=id; if(vm){ R.vmCam.add(vm.group); vm.flash=makeFlash(); vm.gun.add(vm.flash); vm.flash.position.copy(vm.gun.userData.muzzle||new THREE.Vector3(0,0.05,-0.5)); } }
-    if(!vm) return; const w=WPN[id]||{}; const u=vm.gun.userData; const g=vm.group;
+    const att=s&&id===s.id?s.att:null, vk=id?id+'|'+attKey(att):null;
+    if(vk!==vmId){ if(vm){ R.vmCam.remove(vm.group); } vm=id?getVM(id,att):null; vmId=vk; if(vm){ R.vmCam.add(vm.group); vm.group.position.set(HIP.x,HIP.y-0.25,HIP.z); } }
+    if(!vm) return; const w=(s&&id===s.id&&s.w)||WPN[id]||{}; const u=vm.gun.userData; const g=vm.group;
     const scoped=u.scope&&me.adsT>0.85; g.visible=!scoped&&!Game.spectate;
     swayX*=Math.max(0,1-dt*10); swayY*=Math.max(0,1-dt*10);
     const ads=me.adsT, sp=Math.hypot(me.vx,me.vz);
-    let px=lerp(0.19,0,ads), py=lerp(-0.2,-(u.sight||0.1),ads), pz=lerp(-0.46,-0.34,ads), rx=0, ry=lerp(-0.05,0,ads), rz=0;
-    if(u.melee&&!u.shield){ px=0.2; py=-0.22; pz=-0.38; } if(u.shield){ px=0.05; py=-0.2; pz=-0.45; } if(u.item){ px=0.22; py=-0.2; pz=-0.38; }
+    const az=u.adsZ!=null?u.adsZ:(u.pistol?-0.27:-0.21);
+    let px=lerp(HIP.x,0,ads), py=lerp(HIP.y,-(u.sight||0.1),ads), pz=lerp(u.pistol?HIP.z-0.08:HIP.z,az,ads), rx=0, ry=lerp(HIP.ry,0,ads), rz=0;
+    if(u.melee&&!u.shield){ px=0.16; py=-0.16; pz=-0.3; ry=0; } if(u.shield){ px=0.05; py=-0.2; pz=-0.45; ry=0; } if(u.item){ px=0.18; py=-0.17; pz=-0.32; ry=0; }
     const bb=Math.sin(bob*2)*0.012*Math.min(1,sp/6)*(1-ads*0.85), bs=Math.cos(bob)*0.014*Math.min(1,sp/6)*(1-ads*0.85);
     px+=bs-clamp(swayX,-0.4,0.4)*0.04; py+=bb+clamp(swayY,-0.4,0.4)*0.03;
     if(me.slideT>0){ rz+=0.25; px-=0.03; }
@@ -215,11 +275,16 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
     if(me.switchT>0){ py-=me.switchT*0.6; rx-=me.switchT*1.2; }
     const since=Game.t-me.lastShot; if(since<0.25&&!u.melee){ const k=Math.max(0,1-since/0.09); pz+=0.045*k*(w.recoil||1)*(ads>0.5?0.5:1); rx+=0.07*k*(w.recoil||1); }
     if(u.melee&&since<0.4){ const k=Math.sin(Math.min(1,since/0.35)*Math.PI); rx-=0.9*k; ry+=0.7*k; px-=0.12*k; }
-    if(u.pump){ const ct=me.cycleT; u.pump.position.z=-0.38+(ct>0&&ct<0.6?Math.sin(clamp(1-ct/0.6,0,1)*Math.PI)*0.09:0); }
+    if(u.pump){ const ct=me.cycleT; u.pump.position.z=(u.pump.userData.z0||0)+(ct>0&&ct<0.6?Math.sin(clamp(1-ct/0.6,0,1)*Math.PI)*0.09:0); }
     g.position.set(lerp(g.position.x,px,Math.min(1,dt*18)),lerp(g.position.y,py,Math.min(1,dt*18)),lerp(g.position.z,pz,Math.min(1,dt*22)));
     g.rotation.set(lerp(g.rotation.x,rx,Math.min(1,dt*16)),lerp(g.rotation.y,ry,Math.min(1,dt*16)),lerp(g.rotation.z,rz,Math.min(1,dt*16)));
-    if(vm.flash){ const on=since<0.045&&!u.melee&&!w.silent&&!w.proj; vm.flash.visible=on; if(on){ vm.flash.rotation.z=Math.random()*3; const s=0.7+Math.random()*0.6; vm.flash.scale.setScalar(s*(w.cat==='sg'||w.cat==='sr'?1.5:1)); } }
+    if(vm.flash){ const on=since<0.045&&!u.melee&&!w.silent&&!w.noFlash&&!w.proj; vm.flash.visible=on; if(on){ vm.flash.rotation.z=Math.random()*3; const s=0.7+Math.random()*0.6; vm.flash.scale.setScalar(s*(w.cat==='sg'||w.cat==='sr'?1.5:1)); } }
   }
+  /* first-person models are built once per weapon and reused (they used to be rebuilt, and leaked, on every switch) */
+  const VMC=new Map(), HIP=Guns.HIP;
+  function getVM(id,att){ const look=lookOf(Game.me), k=id+'|'+attKey(att)+'|'+look; let v=VMC.get(k);
+    if(!v){ if(VMC.size>14){ for(const [kk,o] of VMC){ if(o!==vm){ o.group.traverse(m=>{ if(m.isMesh) m.geometry.dispose(); }); VMC.delete(kk); break; } } }
+      v=Guns.viewmodel(id,att,look); v.flash=makeFlash(); v.gun.add(v.flash); v.flash.position.copy(v.gun.userData.muzzle||new THREE.Vector3(0,0.05,-0.5)); VMC.set(k,v); } return v; }
   function makeFlash(){ const c=document.createElement('canvas'); c.width=c.height=64; const g=c.getContext('2d'); const gr=g.createRadialGradient(32,32,0,32,32,32);
     gr.addColorStop(0,'rgba(255,255,230,1)'); gr.addColorStop(0.3,'rgba(255,200,90,0.9)'); gr.addColorStop(1,'rgba(255,120,20,0)'); g.fillStyle=gr; g.beginPath();
     for(let i=0;i<10;i++){ const a=i/10*Math.PI*2, r=i%2?14:32; g.lineTo(32+Math.cos(a)*r,32+Math.sin(a)*r); } g.fill();

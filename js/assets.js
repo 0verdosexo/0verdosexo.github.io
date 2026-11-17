@@ -48,10 +48,12 @@ const Assets=(()=>{
     m.name=key; matCache.set(key,m); return m;
   }
   /* ---------- props (GLB) ---------- */
+  const toStd=m=>{ if(!m||!m.isMeshPhysicalMaterial) return m; const s=new THREE.MeshStandardMaterial(); THREE.MeshStandardMaterial.prototype.copy.call(s,m); s.type='MeshStandardMaterial'; m.dispose(); return s; };
   function model(name){
     if(modelCache.has(name)) return modelCache.get(name);
     const p=track(new Promise(res=>gltf.load(BASE+'models/'+name+'.glb',g=>{
-      g.scene.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true; const ms=Array.isArray(o.material)?o.material:[o.material];
+      g.scene.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true;
+        if(Array.isArray(o.material)) o.material=o.material.map(toStd); else o.material=toStd(o.material); const ms=Array.isArray(o.material)?o.material:[o.material];
         ms.forEach(m=>{ if(m.map) m.map.anisotropy=maxAniso; m.envMapIntensity=1; }); } });
       const box=new THREE.Box3().setFromObject(g.scene); res({scene:g.scene,box,animations:g.animations});
     },undefined,()=>{ failed.push('model '+name); res(null); })));
@@ -75,27 +77,30 @@ const Assets=(()=>{
 /* ---------- material palette per theme ----------
    Every surface the world builder makes asks for a material by role (ground, cliff, wall_<style>, ...). */
 const THEMES={
-  desert:{ hdri:'desert', exposure:0.92, fog:'#d9c4a2', fogD:[90,420], sun:{color:'#fff1d6',int:3.2,dir:[-0.55,0.72,0.42]}, hemi:0.25, envInt:0.9, bgInt:1.0, bloom:[0.25,0.5,0.88],
-    ground:{tex:'sand_ripple',tile:5,nor:1.4,color:'#d9b98c'}, cliff:{tex:'rock_cliff',tile:7,nor:1.6,color:'#e0c2a5'}, cliffKind:'rock', void:'#120c08'},
-  plaza:{ hdri:'plaza', exposure:1.05, fog:'#cfdbe8', fogD:[110,480], sun:{color:'#fffaf0',int:3.0,dir:[0.45,0.8,0.3]}, hemi:0.3, envInt:1.0, bgInt:1.0, bloom:[0.2,0.45,0.9],
-    ground:{tex:'plaza_tiles',tile:4,nor:0.8,color:'#f4f4f2'}, cliff:{tex:'plaster',tile:3,color:'#f5f6f8'}, cliffKind:'facade_white', void:'#0b1018'},
-  cyber:{ hdri:'cyber', exposure:1.15, fog:'#1a1430', fogD:[30,230], sun:{color:'#8fa8ff',int:0.55,dir:[0.3,0.8,-0.5]}, hemi:0.12, envInt:0.55, bgInt:0.55, bloom:[0.85,0.55,0.62],
+  /* golden hour: low warm sun, long shadows, dusty orange haze */
+  desert:{ hdri:'desert', exposure:0.9, fog:'#e2a878', fogD:[35,300], sun:{color:'#ffb273',int:3.6,dir:[0.74,0.42,0.53]}, hemi:0.34, envInt:0.85, bgInt:1.0, bloom:[0.34,0.5,0.86],
+    ground:{tex:'sand_ripple',tile:5,nor:1.5,color:'#d2a878'}, cliff:{tex:'rock_cliff',tile:14,nor:1.1,color:'#c29a7c'}, cliffKind:'rock', void:'#120c08', warm:true},
+  /* blue hour: the sun is gone, windows and lamps are on */
+  plaza:{ hdri:'plaza', exposure:0.92, fog:'#514c78', fogD:[35,300], sun:{color:'#c9aaff',int:0.7,dir:[0.62,0.6,0.5]}, hemi:0.2, envInt:0.55, bgInt:1.0, bloom:[0.36,0.45,0.84],
+    ground:{tex:'plaza_tiles',tile:4,nor:0.9,rough:0.38,color:'#8f93a6'}, cliff:{tex:'plaster',tile:3,color:'#9fa2b8'}, cliffKind:'facade_white', void:'#0b1018', dusk:true},
+  cyber:{ hdri:'cyber', exposure:1.15, fog:'#1a1430', fogD:[30,230], sun:{color:'#8fa8ff',int:0.55,dir:[0.3,0.8,-0.5]}, hemi:0.12, envInt:0.55, bgInt:0.55, bloom:[0.5,0.45,0.8],
     ground:{tex:'asphalt',tile:5,rough:0.55,nor:1,color:'#b8b8c4'}, cliff:{tex:'concrete_cracked',tile:4,color:'#5a5868'}, cliffKind:'facade_city', void:'#05040a', night:true, rain:true},
-  factory:{ hdri:'factory', exposure:1.0, fog:'#a9a49a', fogD:[60,330], sun:{color:'#ffe6c4',int:2.4,dir:[-0.4,0.65,-0.55]}, hemi:0.28, envInt:0.85, bgInt:0.9, bloom:[0.25,0.5,0.88],
-    ground:{tex:'concrete_cracked',tile:5,nor:1.1,color:'#8f8a82'}, cliff:{tex:'factory_wall',tile:4}, cliffKind:'wall_factory', void:'#0a0806', dust:true}
+  /* bright hazy day in an industrial yard: strong sun, crisp shadows, light haze in the distance */
+  factory:{ hdri:'factory', exposure:0.95, fog:'#c3ccd4', fogD:[70,400], sun:{color:'#fff1d8',int:3.3,dir:[0.45,0.8,0.3]}, hemi:0.3, envInt:0.9, bgInt:1.0, bloom:[0.2,0.45,0.92],
+    ground:{tex:'pad',tile:6,nor:1.2,rough:0.9,color:'#a8a49b'}, road:{tex:'asphalt',tile:5,nor:1,rough:0.85,color:'#8d8d92'}, cliff:{tex:'precast',tile:4.2,nor:1.2,color:'#c9c5bb'}, cliffKind:'wall_factory', void:'#0a0806', dust:true, yard:true}
 };
 /* building styles: exterior wall, interior side, floor, ceiling, roof top, trim (parapets/rails), pillar */
 const STYLES={
-  white:{ext:{tex:'plaster',tile:3,color:'#f3ead8'},int:{tex:'plaster',tile:3,color:'#ece6da'},floor:{tex:'concrete_floor',tile:3},ceil:{tex:'plaster',tile:3,color:'#f6f2ea'},roof:{tex:'concrete_worn',tile:4},trim:{tex:'concrete_worn',tile:2,color:'#d8d2c4'},accent:'#3c78b4'},
+  white:{ext:{tex:'plaster',tile:3,color:'#e6d6bb'},int:{tex:'plaster',tile:3,color:'#cdbfa6'},floor:{tex:'concrete_floor',tile:3,color:'#a59a8a'},ceil:{tex:'plaster',tile:3,color:'#c9bda8'},roof:{tex:'concrete_worn',tile:4},trim:{tex:'concrete_worn',tile:2,color:'#d8d2c4'},accent:'#3c78b4'},
   metal:{ext:{tex:'metal_panel',tile:2.5,metalMap:true,color:'#c9ccd0'},int:{tex:'plaster',tile:3,color:'#d9dbde'},floor:{tex:'concrete_floor',tile:3},ceil:{tex:'metal_panel',tile:2,color:'#9aa0a6',metalMap:true},roof:{tex:'concrete_worn',tile:4},trim:{tex:'blue_metal',tile:2,metalMap:true},accent:'#2a6fb8'},
-  ruin:{ext:{tex:'sandstone',tile:3},int:{tex:'concrete_cracked',tile:3,color:'#cfc3b2'},floor:{tex:'concrete_cracked',tile:3},ceil:{tex:'concrete_worn',tile:3},roof:{tex:'concrete_cracked',tile:4},trim:{tex:'concrete_worn',tile:2},accent:'#a0602a'},
-  corrugated:{ext:{tex:'corrugated',tile:2.5,metalMap:true,color:'#e0b090'},int:{tex:'metal_panel',tile:2.5,metalMap:true},floor:{tex:'concrete_floor',tile:3},ceil:{tex:'corrugated',tile:2.5,metalMap:true,color:'#9a9a9a'},roof:{tex:'corrugated',tile:3,metalMap:true,color:'#a0a0a0'},trim:{tex:'rust_metal',tile:2,metalMap:true},accent:'#c06020'},
-  concrete:{ext:{tex:'concrete_worn',tile:3},int:{tex:'plaster',tile:3},floor:{tex:'concrete_floor',tile:3},ceil:{tex:'plaster',tile:3},roof:{tex:'concrete_worn',tile:4},trim:{tex:'concrete_worn',tile:2,color:'#c8c4bc'},accent:'#888888'},
-  neo:{ext:{tex:'white_panel',tile:3,color:'#ffffff'},int:{tex:'plaster',tile:2.5,color:'#f2f4f6'},floor:{tex:'plaza_tiles',tile:2.5,color:'#f0f0ee'},ceil:{tex:'plaster',tile:3,color:'#ffffff'},roof:{tex:'plaza_tiles',tile:3},trim:{tex:'blue_metal',tile:2,metalMap:true,color:'#9cc4ff'},accent:'#2f7fe0',glass:'#5aa9ff'},
+  ruin:{ext:{tex:'sandstone',tile:2,color:'#c4ad8e'},int:{tex:'plaster',tile:3,color:'#b3a188'},floor:{tex:'concrete_floor',tile:3,color:'#8d8376'},ceil:{tex:'concrete_worn',tile:3,color:'#9a9184'},roof:{tex:'concrete_cracked',tile:4},trim:{tex:'concrete_worn',tile:2},accent:'#a0602a'},
+  corrugated:{ext:{tex:'rusty_corr',tile:3,metalMap:true,color:'#c9b4a6'},int:{tex:'metal_panel',tile:2.5,metalMap:true},floor:{tex:'concrete_floor',tile:3},ceil:{tex:'corrugated',tile:2.5,metalMap:true,color:'#9a9a9a'},roof:{tex:'corrugated',tile:3,metalMap:true,color:'#a0a0a0'},trim:{tex:'rust_metal',tile:2,metalMap:true},accent:'#c06020'},
+  concrete:{ext:{tex:'concrete_worn',tile:3,color:'#d6c7b0'},int:{tex:'plaster',tile:3,color:'#c6b9a3'},floor:{tex:'concrete_floor',tile:3,color:'#9c9285'},ceil:{tex:'plaster',tile:3,color:'#bdb2a0'},roof:{tex:'concrete_worn',tile:4},trim:{tex:'concrete_worn',tile:2,color:'#c8c4bc'},accent:'#888888'},
+  neo:{ext:{tex:'white_panel',tile:3,color:'#d9dceb'},int:{tex:'plaster',tile:2.5,color:'#d6d2c8'},floor:{tex:'plaza_tiles',tile:2.5,color:'#b9b6b0',rough:0.45},ceil:{tex:'plaster',tile:3,color:'#d8d4ca'},roof:{tex:'plaza_tiles',tile:3},trim:{tex:'blue_metal',tile:2,metalMap:true,color:'#9cc4ff'},accent:'#2f7fe0',glass:'#5aa9ff'},
   neon:{ext:{tex:'concrete_cracked',tile:3,color:'#6b6878'},int:{tex:'metal_panel',tile:2.5,metalMap:true,color:'#5d5f6a'},floor:{tex:'plaza_tiles',tile:2,color:'#4a4a58',rough:0.45},ceil:{tex:'metal_panel',tile:2,color:'#3a3b44',metalMap:true},roof:{tex:'concrete_worn',tile:4,color:'#6a6a70'},trim:{tex:'metal_panel',tile:2,metalMap:true,color:'#444'},accent:'#ff2d7a',neon:true},
   garage:{ext:{tex:'concrete_worn',tile:3,color:'#b8b6b2'},int:{tex:'concrete_worn',tile:3},floor:{tex:'asphalt',tile:4,color:'#8a8a90'},ceil:{tex:'concrete_worn',tile:3},roof:{tex:'asphalt',tile:4,color:'#7a7a80'},trim:{tex:'concrete_worn',tile:2,color:'#d8c24a'},accent:'#ffd02d'},
   shop:{ext:{tex:'brick',tile:2.5,color:'#9a8a8a'},int:{tex:'plaster',tile:3,color:'#b8b0a8'},floor:{tex:'concrete_floor',tile:3},ceil:{tex:'plaster',tile:3,color:'#a8a29a'},roof:{tex:'concrete_worn',tile:4,color:'#77757a'},trim:{tex:'metal_panel',tile:2,metalMap:true,color:'#555'},accent:'#2de1ff',neon:true},
-  factory:{ext:{tex:'factory_brick',tile:3},int:{tex:'factory_wall',tile:3,color:'#b4b0a6'},floor:{tex:'concrete_cracked',tile:4,color:'#9a958c'},ceil:{tex:'rust_sheet',tile:3,metalMap:true,color:'#9a9a9a'},roof:{tex:'rust_sheet',tile:3,metalMap:true},trim:{tex:'rust_metal',tile:2,metalMap:true},accent:'#d0a020'},
+  factory:{ext:{tex:'factory_brick',tile:3},int:{tex:'factory_wall',tile:3,color:'#b4b0a6'},floor:{tex:'concrete_floor',tile:4,color:'#85827b'},ceil:{tex:'rust_sheet',tile:3,metalMap:true,color:'#9a9a9a'},roof:{tex:'rust_sheet',tile:3,metalMap:true},trim:{tex:'rust_metal',tile:2,metalMap:true},accent:'#d0a020'},
   office:{ext:{tex:'factory_wall',tile:3,color:'#c4bfb4'},int:{tex:'plaster',tile:3,color:'#c8c2b5'},floor:{tex:'concrete_floor',tile:3},ceil:{tex:'plaster',tile:3,color:'#bdb7aa'},roof:{tex:'concrete_worn',tile:4},trim:{tex:'rust_metal',tile:2,metalMap:true},accent:'#4a7a9a'},
   brick:{ext:{tex:'brick',tile:2.5},int:{tex:'plaster',tile:3},floor:{tex:'concrete_floor',tile:3},ceil:{tex:'plaster',tile:3},roof:{tex:'concrete_worn',tile:4},trim:{tex:'concrete_worn',tile:2},accent:'#a05030'}
 };

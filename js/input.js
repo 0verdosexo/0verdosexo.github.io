@@ -11,33 +11,48 @@ const Input=(()=>{
     addEventListener('keydown',e=>{ if(isTyping(e)) return; if(!enabled) return; if(e.code==='Tab'||e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); if(!keys.has(e.code)) pressed.add(e.code); keys.add(e.code); });
     addEventListener('keyup',e=>{ keys.delete(e.code); });
     addEventListener('blur',()=>{ keys.clear(); mouseL=mouseR=false; });
-    cv.addEventListener('mousedown',e=>{ if(!enabled) return; if(!locked&&!isTouch){ requestLock(); return; } if(e.button===0) mouseL=true; if(e.button===2) mouseR=true; });
+    /* listen on the whole page, not the canvas: the HUD layer sits on top of the canvas, so a click on the screen never reached it.
+       If the browser refused the first capture (it does when loading took longer than a few seconds), any click on the play screen captures the mouse now. */
+    addEventListener('mousedown',e=>{ if(!enabled) return;
+      if(!locked){ if(wantLock(e.target)){ requestLock(); e.preventDefault(); } return; }
+      if(e.button===0) mouseL=true; if(e.button===2) mouseR=true; });
     addEventListener('mouseup',e=>{ if(e.button===0) mouseL=false; if(e.button===2) mouseR=false; });
-    cv.addEventListener('contextmenu',e=>e.preventDefault());
+    addEventListener('contextmenu',e=>{ if(document.body.classList.contains('ingame')&&!isTyping(e)) e.preventDefault(); });
     addEventListener('mousemove',e=>{ if(locked){ mdx+=e.movementX; mdy+=e.movementY; } });
     addEventListener('wheel',e=>{ if(locked) wheel+=Math.sign(e.deltaY); },{passive:true});
-    document.addEventListener('pointerlockchange',()=>{ locked=document.pointerLockElement===canvas; Bus.emit('lock',locked); });
+    document.addEventListener('pointerlockchange',()=>{ locked=document.pointerLockElement===canvas; if(!locked){ mouseL=mouseR=false; mdx=mdy=0; } Bus.emit('lock',locked); });
+    document.addEventListener('pointerlockerror',()=>{ Bus.emit('lockfail'); });
   }
+  /* may a click on this element capture the mouse? only on the bare play screen, never on menus, buttons or text boxes */
+  function wantLock(t){ if(isTouch||document.body.classList.contains('touch')||!document.body.classList.contains('ingame')) return false;
+    if(typeof UI!=='undefined'&&UI.overlayOpen()) return false; if(typeof Game!=='undefined'&&(!Game.active||Game.state==='end'||Game.state==='loading')) return false;
+    return !(t&&t.closest&&t.closest('button,input,textarea,select,a,#pause,#result,#hBoard,#loading')); }
   const isTyping=e=>{ const t=e.target; return t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'); };
   function requestLock(){ if(isTouch||!canvas||document.body.classList.contains('touch')) return; const plain=()=>{ try{ const q=canvas.requestPointerLock(); if(q&&q.catch) q.catch(()=>{}); }catch(_){} };
-    try{ const p=canvas.requestPointerLock({unadjustedMovement:true}); if(p&&p.catch) p.catch(e=>{ if(e&&e.name==='NotSupportedError') plain(); }); }catch(_){ plain(); } }
+    try{ const p=canvas.requestPointerLock({unadjustedMovement:true}); if(p&&p.catch) p.catch(e=>{ if(e&&e.name==='NotSupportedError') plain(); else Bus.emit('lockfail'); }); }catch(_){ plain(); } }
   function exitLock(){ if(document.pointerLockElement) document.exitPointerLock(); }
   /* ---------- touch controls ---------- */
   function bindTouch(root){
-    const joy=root.querySelector('#joy'), knob=root.querySelector('#joyKnob'), look=root.querySelector('#lookPad');
+    const joy=root.querySelector('#joy'), knob=root.querySelector('#joyKnob'), look=root.querySelector('#lookPad'), zone=root.querySelector('#joyZone');
     const jr=()=>joy.getBoundingClientRect();
-    joy.addEventListener('touchstart',e=>{ e.preventDefault(); const t=e.changedTouches[0]; touch.jid=t.identifier; moveJ(t); },{passive:false});
+    /* floating stick: it jumps to wherever the left thumb lands, and returns home on release */
+    const editing=()=>document.body.classList.contains('le-edit');
+    const grab=e=>{ if(editing()) return; e.preventDefault(); if(touch.jid!=null) return; const t=e.changedTouches[0]; touch.jid=t.identifier;
+      const R=joy.offsetWidth/2, x=clamp(t.clientX,R+6,innerWidth*0.45), y=clamp(t.clientY,R+6,innerHeight-R-6);
+      joy.style.left=(x-R)+'px'; joy.style.bottom=(innerHeight-y-R)+'px'; joy.classList.add('act'); moveJ(t); };
+    joy.addEventListener('touchstart',grab,{passive:false}); if(zone) zone.addEventListener('touchstart',grab,{passive:false});
     const moveJ=t=>{ const r=jr(), cx=r.left+r.width/2, cy=r.top+r.height/2, R=r.width/2; let dx=(t.clientX-cx)/R, dy=(t.clientY-cy)/R; const l=Math.hypot(dx,dy); if(l>1){ dx/=l; dy/=l; }
       touch.jx=dx; touch.jz=dy; knob.style.transform=`translate(${dx*R*0.6}px,${dy*R*0.6}px)`; };
     addEventListener('touchmove',e=>{ for(const t of e.changedTouches){ if(t.identifier===touch.jid) moveJ(t); else if(t.identifier===touch.lid){ mdx+=(t.clientX-touch.lx)*1.6; mdy+=(t.clientY-touch.ly)*1.6; touch.lx=t.clientX; touch.ly=t.clientY; } } },{passive:false});
-    const end=e=>{ for(const t of e.changedTouches){ if(t.identifier===touch.jid){ touch.jid=null; touch.jx=touch.jz=0; knob.style.transform=''; } if(t.identifier===touch.lid) touch.lid=null; } };
+    const end=e=>{ for(const t of e.changedTouches){ if(t.identifier===touch.jid){ touch.jid=null; touch.jx=touch.jz=0; knob.style.transform=''; joy.style.left=joy.dataset.homeL||''; joy.style.bottom=joy.dataset.homeB||''; joy.classList.remove('act'); } if(t.identifier===touch.lid) touch.lid=null; } };
     addEventListener('touchend',end); addEventListener('touchcancel',end);
     look.addEventListener('touchstart',e=>{ e.preventDefault(); const t=e.changedTouches[0]; touch.lid=t.identifier; touch.lx=t.clientX; touch.ly=t.clientY; },{passive:false});
     root.querySelectorAll('[data-btn]').forEach(b=>{ const a=b.dataset.btn;
-      b.addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); if(a==='ads'){ touch.adsToggle=!touch.adsToggle; b.classList.toggle('on',touch.adsToggle); return; }
+      b.addEventListener('touchstart',e=>{ if(editing()) return; e.preventDefault(); e.stopPropagation(); if(a==='ads'){ touch.adsToggle=!touch.adsToggle; b.classList.toggle('on',touch.adsToggle); return; }
         touch.btn.add(a); touch.tapped.add(a); b.classList.add('on');
         const t=e.changedTouches[0]; if(a==='fire'){ touch.lid=t.identifier; touch.lx=t.clientX; touch.ly=t.clientY; } },{passive:false});
-      b.addEventListener('touchend',e=>{ e.preventDefault(); touch.btn.delete(a); b.classList.remove('on'); },{passive:false}); });
+      const up=e=>{ if(editing()) return; e.preventDefault(); b.classList.remove('on'); if(!root.querySelector(`[data-btn="${a}"].on`)) touch.btn.delete(a); };
+      b.addEventListener('touchend',up,{passive:false}); b.addEventListener('touchcancel',up,{passive:false}); });
   }
   /* sample one frame of intent */
   function sample(){

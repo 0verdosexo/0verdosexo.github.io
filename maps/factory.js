@@ -1,7 +1,7 @@
 /* 버려진 공장 — 녹슨 산업 단지. 2층 메인 공장동(가운데가 뚫린 캣워크), 3층 사무동, 창고, 사일로, 컨테이너 야적장, 하역장. */
 SandTag.registerMap({
   id:'factory', name:'버려진 공장', desc:'녹슨 산업 단지. 캣워크가 있는 거대한 공장동과 3층 사무동, 컨테이너 야적장',
-  theme:'factory', rockH:14,
+  theme:'factory', rockH:14, afDensity:60,
   size:[40,40],
   grid:[
     '########################################',
@@ -137,8 +137,12 @@ SandTag.registerMap({
     upload:{drive:{x:80,z:76},goals:[{x:80,z:144},{x:80,z:22}]},
     parkour:{loop:false,waypoints:[[80,142],[70,130],[56,120],[48,108],[60,108],[76,108],[92,110],[104,110],[116,114],[130,113],[144,110]]}
   },
+  roads:[{x0:8,z0:31,x1:152,z1:41},{x0:76,z0:6,x1:84,z1:31},{x0:8,z0:106,x1:152,z1:111},{x0:122,z0:41,x1:126,z1:106}],
   decor:[
-    {t:'skyline',theme:'factory'},{t:'chimney',x:-14,z:40,h:44,r:3.5},{t:'chimney',x:-10,z:70,h:36,r:3},{t:'crane',x:30,z:126,h:16,span:34,rot:0},
+    {t:'skyline',theme:'factory'},
+    {t:'piperack',x0:44,z0:44,x1:116,z1:44,y:7},{t:'piperack',x0:36,z0:86,x1:36,z1:130,y:6.5},{t:'piperack',x0:62,z0:116,x1:120,z1:116,y:6.5},{t:'piperack',x0:118,z0:20,x1:118,z1:46,y:7},
+    {t:'pole',x:10,z:29,h:9},{t:'pole',x:44,z:29,h:9},{t:'pole',x:74,z:29,h:9.5},{t:'pole',x:112,z:29,h:9},{t:'pole',x:150,z:29,h:9,end:true},
+    {t:'pole',x:150,z:113,h:9},{t:'pole',x:116,z:113,h:9},{t:'pole',x:70,z:113,h:9.5},{t:'pole',x:38,z:113,h:9,end:true},{t:'chimney',x:-14,z:40,h:44,r:3.5},{t:'chimney',x:-10,z:70,h:36,r:3},{t:'crane',x:30,z:126,h:16,span:34,rot:0},
     {t:'pipe',x0:40,z0:46,x1:120,z1:46,y:9},{t:'pipe',x0:120,z0:70,x1:126,z1:70,y:8},{t:'tower',x:170,z:30,h:40,w:7}
   ]
 });

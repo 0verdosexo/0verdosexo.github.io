@@ -2,9 +2,9 @@
 'use strict';
 const QUALITY_PRESETS={
   low:   {name:'낮음',  lite:true, dpr:0.75, shadow:0,    shadowR:0,  post:false, msaa:0, bloom:false, gtao:false, lights:0,  aniso:2,  bigBg:false, propShadow:false, particles:0.5},
-  medium:{name:'보통',  dpr:1,    shadow:2048, shadowR:50, post:true,  msaa:0, bloom:true,  gtao:false, lights:6,  aniso:4,  bigBg:false, propShadow:false, particles:0.8, fxaa:true},
-  high:  {name:'높음',  dpr:1.5,  shadow:4096, shadowR:72, post:true,  msaa:4, bloom:true,  gtao:false, lights:12, aniso:8,  bigBg:true,  propShadow:true,  particles:1},
-  ultra: {name:'최고',  dpr:2,    shadow:4096, shadowR:90, post:true,  msaa:4, bloom:true,  gtao:true,  lights:18, aniso:16, bigBg:true,  propShadow:true,  particles:1.2}
+  medium:{name:'보통',  dpr:1,    shadow:2048, shadowR:50, post:true,  msaa:0, bloom:true,  gtao:false, lights:6,  pool:3, shadowEvery:2, aniso:4,  bigBg:false, propShadow:false, particles:0.8, fxaa:true},
+  high:  {name:'높음',  dpr:1.5,  shadow:4096, shadowR:72, post:true,  msaa:4, bloom:true,  gtao:false, lights:12, pool:5, aniso:8,  bigBg:true,  propShadow:true,  particles:1},
+  ultra: {name:'최고',  dpr:2,    shadow:4096, shadowR:90, post:true,  msaa:4, bloom:true,  gtao:true,  lights:18, pool:8, aniso:16, bigBg:true,  propShadow:true,  particles:1.2}
 };
 let QUALITY=QUALITY_PRESETS.high;
 const R=(()=>{
@@ -45,11 +45,14 @@ const R=(()=>{
     if(QUALITY.gtao){ gtao=new THREE.GTAOPass(scene,camera,size.x,size.y); gtao.output=THREE.GTAOPass.OUTPUT.Default; gtao.blendIntensity=0.85;
       gtao.updateGtaoMaterial({radius:0.6,distanceExponent:1.4,thickness:1.2,scale:1}); composer.addPass(gtao); } else gtao=null;
     vmPass=new THREE.RenderPass(vmScene,vmCam); vmPass.clear=false; vmPass.clearDepth=true; composer.addPass(vmPass);
-    if(QUALITY.bloom){ bloom=new THREE.UnrealBloomPass(new THREE.Vector2(size.x,size.y),0.3,0.5,0.88); composer.addPass(bloom); if(theme) setBloom(theme.bloom); } else bloom=null;
+    if(QUALITY.bloom){ bloom=new THREE.UnrealBloomPass(new THREE.Vector2(size.x>>1,size.y>>1),0.3,0.5,0.88); const bs=bloom.setSize.bind(bloom); bloom.setSize=(w,h)=>bs(Math.max(1,w>>1),Math.max(1,h>>1)); composer.addPass(bloom); if(theme) setBloom(theme.bloom); } else bloom=null;
     out=new THREE.OutputPass(); composer.addPass(out);
     if(QUALITY.fxaa&&!QUALITY.msaa){ const S=THREE.SMAAPass; fxaa=new S(size.x,size.y); composer.addPass(fxaa); } else fxaa=null;
   }
-  function setBloom(b){ if(!bloom||!b) return; bloom.strength=b[0]; bloom.radius=b[1]; bloom.threshold=b[2]; }
+  /* glow around bright things. prefs.glow: 0 = off, 1 = soft (default), 2 = strong. Soft keeps a faint halo only on the very brightest pixels so lights do not smear. */
+  let lastBloom=null;
+  function setBloom(b){ if(b) lastBloom=b; b=b||lastBloom; if(!bloom||!b) return; const g=prefs.glow==null?1:+prefs.glow;
+    bloom.enabled=g>0; bloom.strength=b[0]*(g>=2?1:0.42); bloom.radius=b[1]*(g>=2?1:0.7); bloom.threshold=g>=2?b[2]:Math.max(b[2],0.93); }
   function resize(){ if(!renderer) return; const w=canvas.clientWidth||window.innerWidth, h=canvas.clientHeight||window.innerHeight;
     renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); vmCam.aspect=w/h; vmCam.updateProjectionMatrix();
     if(composer){ const s=renderer.getDrawingBufferSize(new THREE.Vector2()); composer.setSize(w,h); if(gtao) gtao.setSize(s.x,s.y); } }
@@ -73,11 +76,17 @@ const R=(()=>{
     if(QUALITY.shadow){ const tex=2*r/QUALITY.shadow; cx=Math.round(cx/tex)*tex; cz=Math.round(cz/tex)*tex; }
     sun.target.position.set(cx,0,cz); sun.position.set(cx+sunDir.x*220,sunDir.y*220,cz+sunDir.z*220); sun.target.updateMatrixWorld();
   }
+  let rFrame=0;
   function render(){
-    updateSun();
+    rFrame++; const every=QUALITY.shadow?(QUALITY.shadowEvery||1):1;
+    if(every>1){ renderer.shadowMap.autoUpdate=false; if(rFrame%every===0){ updateSun(); renderer.shadowMap.needsUpdate=true; } }
+    else { renderer.shadowMap.autoUpdate=true; updateSun(); }
     if(composer){ composer.render(); }
     else { renderer.autoClear=true; renderer.render(scene,camera); renderer.autoClear=false; renderer.clearDepth(); renderer.render(vmScene,vmCam); renderer.autoClear=true; }
   }
-  return {init,applyQuality,setTheme,render,resize,setBloom,get renderer(){return renderer;},get scene(){return scene;},get camera(){return camera;},
+  /* compile shaders for the target the game really draws into (the post-processing buffer when it is on) */
+  async function precompile(){ const rt=composer?composer.readBuffer:null; const prev=renderer.getRenderTarget(); renderer.setRenderTarget(rt);
+    try{ if(renderer.compileAsync) await renderer.compileAsync(scene,camera); else renderer.compile(scene,camera); renderer.compile(vmScene,vmCam); } finally{ renderer.setRenderTarget(prev); } }
+  return {init,applyQuality,setTheme,render,resize,setBloom,precompile,get renderer(){return renderer;},get scene(){return scene;},get camera(){return camera;},
     get vmScene(){return vmScene;},get vmCam(){return vmCam;},get sun(){return sun;},get hemi(){return hemi;},get theme(){return theme;}};
 })();

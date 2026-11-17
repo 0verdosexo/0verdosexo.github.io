@@ -5,9 +5,10 @@ const Bots=(()=>{
   const DIFF={easy:{react:0.65,err:0.075,turn:3.2,fov:1.7,hs:0.05,burst:0.35,name:'쉬움'},normal:{react:0.38,err:0.04,turn:5.5,fov:2.0,hs:0.15,burst:0.6,name:'보통'},hard:{react:0.2,err:0.018,turn:9,fov:2.3,hs:0.35,burst:0.9,name:'어려움'}};
   const NAMES=['민준','서연','도윤','하은','시우','지우','예준','수아','주원','지호','서윤','건우','유진','현우','채원','은우','하린','준서','다은','태윤','소율','로운','아린','이안'];
   function botName(i){ return NAMES[i%NAMES.length]+(i>=NAMES.length?i:''); }
-  function update(dt){ for(const a of Game.actors) if(a.bot&&a.local){ try{ think(a,dt); }catch(e){ console.error('bot',e); } } }
+  let pathBudget=0; // A* searches allowed this frame; the rest wait a frame or two
+  function update(dt){ pathBudget=3; for(const a of Game.actors) if(a.bot&&a.local){ try{ think(a,dt); }catch(e){ console.error('bot',e); } } }
   function brain(a){ return a.brain||(a.brain={path:null,pi:0,goal:null,goalT:0,repath:0,target:null,seenT:0,lastSeen:null,react:0,strafe:1,strafeT:0,stuckT:0,lastPos:{x:a.x,z:a.z},
-    aimErrX:0,aimErrY:0,nextThink:0,throwT:Game.t+rand(5,12),specT:Game.t+rand(4,10),roam:null,site:null,pkI:1,fleeT:0}); }
+    aimErrX:0,aimErrY:0,nextThink:Game.t+Math.random()*0.2,throwT:Game.t+rand(5,12),specT:Game.t+rand(4,10),roam:null,site:null,pkI:1,fleeT:0}); }
   const D=a=>DIFF[a.diff]||DIFF.normal;
   /* ---------- main ---------- */
   function think(a,dt){
@@ -40,7 +41,8 @@ const Bots=(()=>{
   function goTo(a,b,I,gx,gy,gz,dt,opts){
     opts=opts||{};
     const far=!b.goal||Math.hypot(b.goal.x-gx,b.goal.z-gz)>3||Math.abs((b.goal.y||0)-gy)>1.5;
-    if(far||!b.path||Game.t>b.repath){ b.goal={x:gx,y:gy,z:gz}; b.repath=Game.t+(opts.fast?0.6:2.5);
+    if((far||!b.path||Game.t>b.repath)&&pathBudget<=0&&!b.path){ if(Math.hypot(gx-a.x,gz-a.z)>0.6) steer(a,I,gx,gz); return false; }
+    if((far||!b.path||Game.t>b.repath)&&pathBudget>0){ pathBudget--; b.goal={x:gx,y:gy,z:gz}; b.repath=Game.t+(opts.fast?0.6:2.5)*(0.8+Math.random()*0.4);
       const s=nearestNode(a.x,a.y,a.z,true)||nearestNode(a.x,a.y,a.z), e=nearestNode(gx,gy,gz,true,true)||nearestNode(gx,gy,gz,false,true); b.path=navPath(s,e); b.pi=0;
       if(!b.path){ b.path=[{x:gx,z:gz,h:gy}]; } }
     const p=b.path; if(!p||b.pi>=p.length){ if(Math.hypot(gx-a.x,gz-a.z)>0.6) steer(a,I,gx,gz); return true; }

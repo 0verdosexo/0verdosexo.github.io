@@ -15,7 +15,7 @@ const Net=(()=>{
     room={code,game,host:myId,settings:Object.assign({},settings),players:[me()],started:false};
     Relay.sub(C,roomTopic(),onMsg); connected=true; advertise(); startHB(); Bus.emit('lobby',room); return room;
   }
-  function me(){ return {id:myId,name:prefs.name||'플레이어',ready:false,team:0,pref:'any',load:prefs.loadouts[prefs.cur||0],t:Date.now()}; }
+  function me(){ return {id:myId,name:prefs.name||'플레이어',ready:false,team:0,pref:'any',load:myLoad(),ch:prefs.char?1:0,t:Date.now()}; }
   /* ---------- join ---------- */
   async function join(c){
     leave(); host=false; code=c.toUpperCase().trim(); if(code.length!==5) throw new Error('코드는 5글자예요');

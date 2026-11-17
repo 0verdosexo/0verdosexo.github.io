@@ -2,19 +2,20 @@
    The shooter's client detects hits and sends 'hit'; the victim's owner applies damage. Projectiles are simulated everywhere, resolved by their owner. */
 'use strict';
 const curSlot=a=>a.slots[a.cur]||null;
-const curW=a=>{ const s=curSlot(a); return s?WPN[s.id]||null:null; };
+const curW=a=>{ const s=curSlot(a); return s?s.w||WPN[s.id]||null:null; };
 let PROJ_SEQ=1;
 /* ---------- loadout ---------- */
 function equip(a){
-  const L=a.load||DEFAULT_LOADOUTS[0]; const slot=(id,mul,resMul)=>{ const w=WPN[id]; if(!w) return null; const mag=w.mag?Math.round(w.mag*(mul||1)):0; return {id,mag,max:mag,res:w.res?Math.round(w.res*(resMul||1)):0}; };
+  const L=a.load||DEFAULT_LOADOUT; const slot=(id,mul,resMul,att)=>{ const w=att?wpnWith(id,att):WPN[id]; if(!w) return null; const mag=w.mag?Math.round(w.mag*(mul||1)):0; return {id,w,att:att||null,mag,max:mag,res:w.res?Math.round(w.res*(resMul||1)):0}; };
   a.slots=[]; a.thrLeft=0; a.specCd=0; a.c4=[]; a.cur=0; a.prev=1; a.reloadT=0; a.switchT=0.3; a.fireCD=0; a.burstLeft=0; a.cycleT=0; a.ads=false; a.adsT=0; a.bloom=0; a.carry=null; a.tool=false;
   if(Game.kind==='tag'){ if(a.role==='seek'&&Game.cfg.seekerGun) a.slots=[slot('tagpistol')]; return; }
   const m=Game.mode;
   if(m==='pk'){ a.slots=[slot('fists')]; return; }
   if(m==='gg'){ a.slots=[slot(GG_LADDER[Math.min(a.ggLevel,GG_LADDER.length-1)],1,3),slot('knife')]; return; }
   const ext=Math.pow(2,perkN(L,'extmag')), pk=Math.pow(2,perkN(L,'pockets'));
-  let side=L.side; if(!WPN[side]||(WPN[side].slot==='main'&&!perkN(L,'overkill'))) side='p1912';
-  a.slots=[slot(L.main,ext,pk),slot(side,WPN[side]&&WPN[side].slot==='main'?ext:1,pk),slot(L.melee||'knife')].filter(Boolean);
+  /* gun slot 1 and gun slot 2 take any firearm; each carries its own attachments */
+  const A=Array.isArray(L.att)?L.att:[]; let main=isGun(L.main)?L.main:'m4', side=isGun(L.side)?L.side:'p1912';
+  a.slots=[slot(main,ext,pk,attClean(main,A[0])),slot(side,WPN[side].slot==='main'?ext:1,pk,attClean(side,A[1])),slot(L.melee||'knife')].filter(Boolean);
   const th=TH[L.thr]; if(th) a.thrLeft=perkN(L,'armed')?th.armed:th.count;
 }
 /* ---------- per-frame weapon logic (owner side) ---------- */
@@ -28,7 +29,7 @@ function weaponUpdate(a,I,dt){
   if(want>=0&&want<a.slots.length&&want!==a.cur&&!a.carryLock) switchTo(a,want);
   const s=curSlot(a), w=curW(a); if(!s||!w) return;
   a.ads=!!I.ads&&a.switchT<=0&&a.reloadT<=0&&w.mode!=='melee'&&!w.shield;
-  a.adsT=clamp(a.adsT+(a.ads?dt*7:-dt*8),0,1);
+  a.adsT=clamp(a.adsT+(a.ads?dt*7*(w.adsSpd||1):-dt*8),0,1);
   /* reload */
   if(a.reloadT>0){ a.reloadT-=dt;
     if(a.reloadT<=0){ if(w.shell){ if(s.res>0&&s.mag<s.max){ s.mag++; s.res--; if(s.mag<s.max&&s.res>0&&!(I.fire&&s.mag>0)) a.reloadT=reloadTime(a,w); Sfx.play('reload_pistol',{x:a.x,y:a.y+1,z:a.z,vol:0.35,rate:1.6,dist:20}); } }
@@ -62,7 +63,7 @@ function muzzlePos(a){ const d=aimDir(a), r={x:Math.cos(a.yaw),z:-Math.sin(a.yaw
 function fire(a,w,s){
   s.mag--; a.lastShot=Game.t; a.bloom=Math.min(1.5,a.bloom+(w.pellets>1?0.3:0.12));
   const kick=w.recoil*0.0105*(a.adsT>0.5?0.75:1)*(a.crouch?0.8:1); a.pitch+=kick; a.recoilP+=kick; a.yaw+=(Math.random()-0.5)*kick*0.6;
-  a.revealT=perkN(a.load,'ghost')?0:Game.t+(perkN(a.load,'eagle')?3:1.6);
+  a.revealT=perkN(a.load,'ghost')?0:Game.t+(w.silent?0.5:perkN(a.load,'eagle')?3:1.6);
   const d=aimDir(a), ex=a.x, ey=eyeY(a), ez=a.z;
   if(w.proj){ spawnProj(a,w.proj,{x:ex+d.x*0.5,y:ey-0.1+d.y*0.5,z:ez+d.z*0.5},d,w.pspeed,w); }
   else {
@@ -73,7 +74,7 @@ function fire(a,w,s){
     }
     for(const [vid,h] of hits) Game.emit('hit',{a:a.id,v:vid,d:Math.round(h.d),h:h.head?1:0,w:w.id});
     const mz=muzzlePos(a);
-    Game.emit('shot',{a:a.id,w:w.id,o:[+mz.x.toFixed(2),+mz.y.toFixed(2),+mz.z.toFixed(2)],e:ends.map(e=>[+e[0].toFixed(2),+e[1].toFixed(2),+e[2].toFixed(2),e[3]])});
+    const ev={a:a.id,w:w.id,o:[+mz.x.toFixed(2),+mz.y.toFixed(2),+mz.z.toFixed(2)],e:ends.map(e=>[+e[0].toFixed(2),+e[1].toFixed(2),+e[2].toFixed(2),e[3]])}; if(w.silent&&!WPN[w.id].silent) ev.sl=1; Game.emit('shot',ev);
   }
   if(a.local&&!a.bot) Bus.emit('fired',{w,kick});
 }

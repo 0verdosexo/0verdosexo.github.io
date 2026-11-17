@@ -11,6 +11,62 @@ let PK=null;                     // destructible objects by id
 const SMOKES=[];
 let OBJ_SEQ=1;
 
+/* ---------- auto-fill: dress the empty outdoor ground with themed cover (containers, vehicles, stacks...) ----------
+   Deterministic per map (seeded), so every client builds the same layout. Each cluster keeps a free ring around it,
+   so nothing can ever seal a path; entrances, spawns, objectives, orbs, ladders and ramps are kept clear. */
+const AF_TYPES={ // footprint length (x) × depth (z), collision height, and sub-boxes for stacks
+  cont:{l:6.1,d:2.5,h:2.6}, cont2:{l:6.1,d:2.5,h:5.2}, contL:{l:6.1,d:5.6,h:2.6},
+  sedan:{l:4.5,d:1.9,h:1.45}, van:{l:5.2,d:2.1,h:2.2}, pickup:{l:5.2,d:2.0,h:1.75}, truck:{l:7.4,d:2.5,h:3.1},
+  pipes:{l:2.6,d:2.9,h:2.3}, bags:{l:1.3,d:1.1,h:1.3}, bags2:{l:2.9,d:1.1,h:1.3}, spool:{l:1.9,d:1.2,h:1.9}, dumpster:{l:2.4,d:1.4,h:1.5},
+  jersey:{l:6.2,d:0.7,h:1.05}, crates:{l:2.2,d:2.2,h:2.1}, sandbag:{l:3.6,d:0.8,h:1.2}, sandbagL:{l:3.6,d:3.0,h:1.2}, hesco:{l:4.0,d:1.3,h:1.4},
+  gcar:{l:4.4,d:1.8,h:1.4}, cement:{l:1.3,d:1.1,h:1.05}, tyres:{l:1.4,d:0.7,h:0.7}, drums:{l:1.4,d:1.4,h:0.93}, ibc:{l:2.4,d:1.5,h:1.0}, milc:{l:1.3,d:1.1,h:0.92},
+  tank:{l:4.6,d:2.0,h:2.4}, shelter:{l:4.2,d:1.6,h:2.6,thin:true}, bench:{l:2.0,d:0.7,h:0.9}, kiosk:{l:2.6,d:2.0,h:2.7}, bollards:{l:4.4,d:0.4,h:0.95}
+};
+const AF_KITS={
+  factory:[['cont',9],['cont2',9],['contL',6],['van',3],['pickup',3],['truck',5],['gcar',4],['pipes',3],['cement',3],['spool',2],['dumpster',2],['jersey',3],['crates',2],['tank',2],['tyres',2],['drums',3],['milc',1]],
+  desert:[['sandbag',4],['sandbagL',5],['hesco',6],['crates',5],['pickup',3],['truck',3],['cont',4],['cont2',2],['contL',2],['jersey',2],['bags2',1],['pipes',1]],
+  plaza:[['sedan',12],['van',5],['pickup',3],['truck',2],['shelter',3],['bench',1],['kiosk',3],['bollards',2],['dumpster',1],['jersey',2],['crates',1]]
+};
+const AF_COLORS={cont:['#8a3a28','#2f5f7a','#6a6a32','#406a3a','#a07a28','#7a7d82','#3c4a6a'],car:['#b9bcc2','#23262b','#7a1f1c','#1f3d6b','#d6d2c4','#3d4a3a','#8a8d92','#c9a23a'],
+  desert:['#6b6a48','#8a7a56','#4f5a3c','#9a8a6a'],bag:['#b3962e','#a9a598','#35598a'],dump:['#2f5a3a','#2f4f7a','#5a5d62']};
+function autoFill(def){
+  const R=mulberry(hashStr('af:'+def.id)), GW=W*CELL, GH=H*CELL, occ=new Uint8Array(GW*GH);
+  const mark=(x0,z0,x1,z1,m)=>{ const a=Math.max(0,Math.floor(x0-m)), b=Math.min(GW,Math.ceil(x1+m)), c=Math.max(0,Math.floor(z0-m)), d=Math.min(GH,Math.ceil(z1+m)); for(let z=c;z<d;z++) for(let x=a;x<b;x++) occ[z*GW+x]=1; };
+  const free=(x0,z0,x1,z1)=>{ const a=Math.floor(x0), b=Math.ceil(x1), c=Math.floor(z0), d=Math.ceil(z1); if(a<0||c<0||b>GW||d>GH) return false; for(let z=c;z<d;z++) for(let x=a;x<b;x++) if(occ[z*GW+x]) return false; return true; };
+  const pt=(x,z,r)=>{ if(x!=null) mark(x,z,x,z,r); };
+  for(let r=0;r<H;r++) for(let c=0;c<W;c++) if(G[r*W+c]!==1) mark(c*CELL,r*CELL,(c+1)*CELL,(r+1)*CELL,0);
+  for(const b of (def.buildings||[])) mark(b.x,b.z,b.x+b.w,b.z+b.d,1.6);
+  for(const b of BOXES) if(b.y0<3.2) mark(b.x0,b.z0,b.x1,b.z1,0.6);
+  for(const r of RAMPS) mark(r.x0,r.z0,r.x1,r.z1,3);
+  for(const l of LADDERS) pt(l.x,l.z,3);
+  pt(SPAWN_RUN.x,SPAWN_RUN.z,8); pt(SPAWN_SEEK.x,SPAWN_SEEK.z,8); if(def.jail) pt(def.jail.x,def.jail.z,8);
+  for(const p of PORTALS){ pt(p.x,p.z,5); pt(p.ex,p.ez,5); }
+  if(DOOR) mark(DOOR.c0*CELL,DOOR.r0*CELL,DOOR.c1*CELL,(DOOR.r0+1)*CELL,10);
+  const B=def.battle||{}; for(const k of ['spawnsA','spawnsB']) for(const p of (B[k]||[])) pt(p.x,p.z,4);
+  for(const k of ['points','hardpoints','sites','flags']) for(const p of (B[k]||[])) pt(p.x,p.z,5);
+  if(B.upload){ pt(B.upload.drive.x,B.upload.drive.z,5); for(const g of B.upload.goals) pt(g.x,g.z,5); }
+  const O=def.orbs||{}; for(const c of (O.ground||[])) pt((c[0]+0.5)*CELL,(c[1]+0.5)*CELL,3); for(const zl of (O.zones||[])) for(const c of zl) pt((c[0]+0.5)*CELL,(c[1]+0.5)*CELL,3);
+  for(const z of ZONES) mark(z.c0*CELL,z.r0*CELL,z.c1*CELL,z.r1*CELL,0); // tag hide zones stay as designed
+  for(const f of FLOORPAINT) if(f.x0!=null) mark(f.x0,f.z0,f.x1,f.z1,0);
+  for(const r of (def.roads||[])) mark(r.x0,r.z0,r.x1,r.z1,0); // roads stay drivable lanes
+  let open=0; for(let i=0;i<occ.length;i++) if(!occ[i]) open++;
+  const kit=AF_KITS[def.theme], tot=kit.reduce((a,k)=>a+k[1],0), want=Math.min(80,Math.round(open/(def.afDensity||95))), RING=2.3; let placed=0;
+  for(let tries=0;tries<want*140&&placed<want;tries++){
+    let r=R()*tot, type=kit[0][0]; for(const k of kit){ r-=k[1]; if(r<=0){ type=k[0]; break; } }
+    const T=AF_TYPES[type], rot=R()<0.5?0:1, l=rot?T.d:T.l, d=rot?T.l:T.d;
+    const x0=Math.round((3+R()*(GW-6-l))*2)/2, z0=Math.round((3+R()*(GH-6-d))*2)/2;
+    if(!free(x0-RING,z0-RING,x0+l+RING,z0+d+RING)) continue;
+    const pick=a=>a[(R()*a.length)|0];
+    const col=type.startsWith('cont')?pick(AF_COLORS.cont):['sedan','van','pickup','truck'].includes(type)?pick(def.theme==='desert'?AF_COLORS.desert:AF_COLORS.car):type.startsWith('bags')?pick(AF_COLORS.bag):type==='dumpster'?pick(AF_COLORS.dump):type==='tank'?pick(['#8f9498','#72846e','#9a8c74']):type==='kiosk'?pick(['#b9b5aa','#8fa3b8','#b8a08a']):'#ffffff';
+    const af={type,rot,flip:R()<0.5,c:col,c2:pick(AF_COLORS.cont),seed:(R()*1e6)|0};
+    const add=(bx0,bz0,bx1,bz1,h,first)=>BOXES.push({x0:bx0,x1:bx1,z0:bz0,z1:bz1,y0:0,y1:h,k:'af',af:first?af:null});
+    if(type==='contL'||type==='sandbagL'){ // L shape: one long arm + one short arm, the inside corner stays open as a nook
+      const w=type==='contL'?2.5:0.8; if(rot){ add(x0,z0,x0+w,z0+d,T.h,true); add(x0,z0,x0+l,z0+w,T.h,false); } else { add(x0,z0,x0+l,z0+w,T.h,true); add(x0,z0,x0+w,z0+d,T.h,false); } }
+    else if(T.thin){ if(rot) add(x0,z0,x0+0.25,z0+d,T.h,true); else add(x0,z0,x0+l,z0+0.25,T.h,true); af.fx=x0; af.fz=z0; af.fl=l; af.fd=d; }
+    else add(x0,z0,x0+l,z0+d,T.h,true);
+    af.x0=x0; af.z0=z0; af.l=l; af.d=d; mark(x0,z0,x0+l,z0+d,0.4); placed++;
+  }
+}
 function setMapData(def,opts){
   opts=opts||{}; MAP=def; MAP_MODE=opts.mode||null; [W,H]=def.size;
   LOWB=def.lowBuildings||[]; ZONES=def.zones||[]; FLOORPAINT=def.floorPaint||[]; DOOR=def.door||null; PORTALS=def.portals||[];
@@ -35,6 +91,7 @@ function setMapData(def,opts){
   for(const w of (def.walls||[])) for(let y=w.r0;y<w.r1;y++)for(let x=w.c0;x<w.c1;x++) if(inB(x,y)){ G[y*W+x]=0; WH[y*W+x]=w.h; }
   for(const L of LOWB) fillG(L.c0,L.r0,L.c1,L.r1,3);
   if(DOOR){ for(let x=DOOR.c0;x<DOOR.c1;x++) G[DOOR.r0*W+x]=2; } else { for(let i=0;i<G.length;i++) if(G[i]===2){ const c=i%W,r=(i/W)|0; if(!DOOR) DOOR={c0:c,r0:r,c1:c+1,name:def.doorName||'탈출문'}; else if(r===DOOR.r0) DOOR.c1=Math.max(DOOR.c1,c+1); } }
+  if(MAP_MODE!=='pk'&&def.autoFill!==false&&AF_KITS[def.theme]) autoFill(def);
   OBJS.clear(); OBJ_SEQ=1; SOL=[];
   for(const L of LOWB) SOL.push({t:'b',x0:L.c0*CELL,x1:L.c1*CELL,z0:L.r0*CELL,z1:L.r1*CELL,y0:0,y1:L.h,k:'low'});
   for(const b of BOXES){ const s=Object.assign({t:'b'},b); SOL.push(s); if(s.destr) registerObj(s); }
@@ -186,20 +243,25 @@ function nearestNode(x,y,z,strictH,reach){ const i0=Math.floor(x/NS), j0=Math.fl
   return best; }
 const objAlive=oid=>{ const o=OBJS.get(oid); return !o||o.alive; };
 /* A* over the node graph; returns [{x,z,h,jump,ladder}] excluding the start node */
+let _npN=0,_npG=null,_npPrev=null,_npVia=null,_npSeen=null,_npClosed=null,_npGen=0,_npHf=new Float64Array(2048),_npHi=new Int32Array(2048);
 function navPath(a,b){
   if(!a||!b) return null; if(a===b) return [];
-  const N=NODES.length, g=new Float32Array(N).fill(Infinity), prev=new Int32Array(N).fill(-1), via=new Array(N), closed=new Uint8Array(N);
-  const heap=[]; const push=(i,f)=>{ heap.push([f,i]); let k=heap.length-1; while(k>0){ const p=(k-1)>>1; if(heap[p][0]<=heap[k][0]) break; [heap[p],heap[k]]=[heap[k],heap[p]]; k=p; } };
-  const pop=()=>{ const top=heap[0], last=heap.pop(); if(heap.length){ heap[0]=last; let k=0; for(;;){ const l=2*k+1,r=l+1; let m=k; if(l<heap.length&&heap[l][0]<heap[m][0]) m=l; if(r<heap.length&&heap[r][0]<heap[m][0]) m=r; if(m===k) break; [heap[m],heap[k]]=[heap[k],heap[m]]; k=m; } } return top; };
-  const hf=n=>Math.hypot(n.x-b.x,n.z-b.z)+Math.abs(n.h-b.h);
-  g[a.i]=0; push(a.i,hf(a)); let found=false, it=0;
-  while(heap.length&&it++<14000){ const [,ci]=pop(); if(closed[ci]) continue; closed[ci]=1; if(ci===b.i){ found=true; break; }
-    const cn=NODES[ci];
-    for(const e of cn.e){ const nn=NODES[e.n]; if(closed[e.n]) continue; if(nn.oid&&!objAlive(nn.oid)) continue;
-      const cost=g[ci]+NS*(e.jump?1.6:1)+(e.ladder?3:0)+Math.max(0,nn.h-cn.h)*0.5;
-      if(cost<g[e.n]){ g[e.n]=cost; prev[e.n]=ci; via[e.n]=e; push(e.n,cost+hf(nn)); } } }
+  const N=NODES.length;
+  if(N>_npN){ _npN=N; _npG=new Float32Array(N); _npPrev=new Int32Array(N); _npVia=new Array(N); _npSeen=new Uint32Array(N); _npClosed=new Uint32Array(N); }
+  const gen=++_npGen; let hn=0;
+  const push=(i,f)=>{ if(hn>=_npHi.length){ const nf=new Float64Array(_npHf.length*2); nf.set(_npHf); _npHf=nf; const ni=new Int32Array(_npHi.length*2); ni.set(_npHi); _npHi=ni; }
+    let k=hn++; while(k>0){ const p=(k-1)>>1; if(_npHf[p]<=f) break; _npHf[k]=_npHf[p]; _npHi[k]=_npHi[p]; k=p; } _npHf[k]=f; _npHi[k]=i; };
+  const pop=()=>{ const top=_npHi[0]; hn--; if(hn>0){ const f=_npHf[hn], i=_npHi[hn]; let k=0;
+      for(;;){ const l=2*k+1; if(l>=hn) break; let m=l; if(l+1<hn&&_npHf[l+1]<_npHf[l]) m=l+1; if(_npHf[m]>=f) break; _npHf[k]=_npHf[m]; _npHi[k]=_npHi[m]; k=m; } _npHf[k]=f; _npHi[k]=i; } return top; };
+  const bx=b.x,bz=b.z,bh=b.h, hf=n=>Math.hypot(n.x-bx,n.z-bz)+Math.abs(n.h-bh);
+  _npSeen[a.i]=gen; _npG[a.i]=0; push(a.i,hf(a)); let found=false, it=0;
+  while(hn&&it++<14000){ const ci=pop(); if(_npClosed[ci]===gen) continue; _npClosed[ci]=gen; if(ci===b.i){ found=true; break; }
+    const cn=NODES[ci], gc=_npG[ci];
+    for(const e of cn.e){ const ni=e.n; if(_npClosed[ni]===gen) continue; const nn=NODES[ni]; if(nn.oid&&!objAlive(nn.oid)) continue;
+      const cost=gc+NS*(e.jump?1.6:1)+(e.ladder?3:0)+Math.max(0,nn.h-cn.h)*0.5;
+      if(_npSeen[ni]!==gen||cost<_npG[ni]){ _npSeen[ni]=gen; _npG[ni]=cost; _npPrev[ni]=ci; _npVia[ni]=e; push(ni,cost+hf(nn)); } } }
   if(!found) return null; const out=[]; let c=b.i;
-  while(c!==a.i){ const n=NODES[c], e=via[c]; out.push({x:n.x,z:n.z,h:n.h,jump:!!(e&&e.jump),ladder:e&&e.ladder||null,i:c}); c=prev[c]; }
+  while(c!==a.i){ const n=NODES[c], e=_npVia[c]; out.push({x:n.x,z:n.z,h:n.h,jump:!!(e&&e.jump),ladder:e&&e.ladder||null,i:c}); c=_npPrev[c]; }
   out.reverse(); return out;
 }
 function reachSet(from){ const seen=new Set(); if(!from) return seen; seen.add(from.i); const q=[from.i];

@@ -48,7 +48,77 @@ const WPN={
  snowcan:{name:'눈 대포',cat:'other',dmg:12,rpm:400,mag:40,res:160,reload:2.5,proj:'snow',pspeed:48,pgrav:7,spread:1.5,recoil:0.5,slow:0.4,knock:4,snd:'snow',desc:'맞으면 느려지고 밀려나요.'}
 };
 for(const id in WPN){ const w=Object.assign({},WDEF,WPN[id]); w.id=id; if(w.mode==="melee"){ w.mag=0; w.res=0; } WPN[id]=w; }
+/* ---------- attachments (gunsmith) ----------
+   Five slots per gun. Each option changes the model (guns.js) and the numbers below. Multipliers stack. */
+const ATT_SLOTS=['scope','muzzle','barrel','stock','mag'];
+const ATT_SLOT_NAMES={scope:'조준경',muzzle:'총구',barrel:'총열',stock:'개머리판',mag:'탄창'};
+const ATT={
+ scope:{
+  iron:{name:'기계식 조준기',desc:'가장 빠른 조준. 시야를 거의 가리지 않아요.',adsSpd:1.08},
+  reddot:{name:'레드 도트',desc:'빨간 점 하나. 근·중거리에 좋아요.',z:0.97},
+  holo:{name:'홀로그램',desc:'넓은 창과 원형 조준점.',z:0.95},
+  x2:{name:'2배율',desc:'중거리용 저배율 조준경.',zoom:0.56,adsSpd:0.92},
+  x3:{name:'3배율',desc:'중·장거리용.',zoom:0.42,adsSpd:0.86},
+  x4:{name:'4배율',desc:'장거리 스코프. 조준하면 스코프 화면이 돼요.',zoom:0.31,adsSpd:0.78,scope:true},
+  x6:{name:'6배율',desc:'더 멀리. 조준이 조금 느려요.',zoom:0.21,adsSpd:0.7,scope:true},
+  x8:{name:'8배율',desc:'초장거리 저격용.',zoom:0.155,adsSpd:0.62,scope:true}},
+ muzzle:{
+  none:{name:'없음',desc:'기본 총구.'},
+  comp:{name:'보정기',desc:'반동 -20%.',recoil:0.8},
+  flash:{name:'소염기',desc:'총구 화염이 안 보이고 반동 -10%.',recoil:0.9,noFlash:true},
+  sup:{name:'소음기',desc:'총소리가 작아지고 미니맵에 잠깐만 보여요. 유효 사거리 -10%.',silent:true,noFlash:true,range:0.9,far:0.92},
+  choke:{name:'초크',desc:'산탄이 덜 퍼져요 (-25%).',spread:0.75}},
+ barrel:{
+  std:{name:'기본 총열',desc:'균형 잡힌 기본형.'},
+  long:{name:'긴 총열',desc:'사거리 +20%, 정확도 +10%. 조금 무거워요.',range:1.2,far:1.2,spread:0.9,speed:0.97,sw:1.12,adsSpd:0.93},
+  short:{name:'짧은 총열',desc:'가볍고 빠른 조준. 사거리 -15%.',range:0.85,far:0.85,spread:1.1,speed:1.03,sw:0.85,adsSpd:1.15},
+  heavy:{name:'헤비 총열',desc:'반동 -15%, 이동 속도 -4%.',recoil:0.85,speed:0.96,sw:1.1}},
+ stock:{
+  std:{name:'기본 개머리판',desc:'기본형.'},
+  light:{name:'경량 개머리판',desc:'조준 속도 +25%, 이동 +3%. 반동 +8%.',adsSpd:1.25,speed:1.03,recoil:1.08},
+  heavy:{name:'전술 개머리판',desc:'반동 -12%, 움직이며 쏠 때 덜 퍼져요.',recoil:0.88,move:0.7,adsSpd:0.95},
+  none:{name:'개머리판 제거',desc:'무기 교체 -25%, 이동 +5%. 반동 +20%.',sw:0.75,speed:1.05,recoil:1.2,move:1.15}},
+ mag:{
+  std:{name:'기본 탄창',desc:'기본형.'},
+  ext:{name:'대용량 탄창',desc:'탄창 +40%. 장전 +10%.',mag:1.4,reload:1.1},
+  quick:{name:'퀵드로우 탄창',desc:'장전 시간 -25%.',reload:0.75},
+  extq:{name:'대용량 퀵드로우',desc:'탄창 +25%, 장전 -12%.',mag:1.25,reload:0.88},
+  drum:{name:'드럼 탄창',desc:'탄창 2배. 장전 +35%, 이동 -3%.',mag:2,reload:1.35,speed:0.97}}
+};
+/* which options each gun accepts (first entry = what it ships with) */
+(()=>{ const set=(w,o)=>{ w.att=o; };
+  for(const id in WPN){ const w=WPN[id]; if(w.mode==='melee'||w.proj||w.slot==='tag'||['flintlock','sawed'].includes(id)){ w.att=null; continue; }
+    const c=w.cat;
+    if(c==='ar') set(w,{scope:['iron','reddot','holo','x2','x3','x4','x6'],muzzle:['none','comp','flash','sup'],barrel:['std','long','short','heavy'],stock:['std','light','heavy','none'],mag:['std','ext','quick','extq','drum']});
+    else if(c==='smg') set(w,{scope:['iron','reddot','holo','x2','x3'],muzzle:['none','comp','flash','sup'],barrel:['std','long','short'],stock:['std','light','heavy','none'],mag:['std','ext','quick','extq','drum']});
+    else if(c==='sg') set(w,{scope:['iron','reddot','holo','x2'],muzzle:['none','choke','comp','sup'],barrel:['std','long','short'],stock:['std','light','heavy','none'],mag:id==='autosg'?['std','ext','quick']:['std']});
+    else if(c==='sr') set(w,{scope:['iron','reddot','holo','x2','x3','x4','x6','x8'],muzzle:['none','comp','flash','sup'],barrel:['std','long','short','heavy'],stock:['std','light','heavy'],mag:['std','ext','quick','extq']});
+    else if(c==='pistol') set(w,{scope:['iron','reddot'],muzzle:['none','comp','sup'],barrel:['std','long'],stock:['std'],mag:['std','ext','quick']});
+    else w.att=null; }
+  const only=(id,slot,list)=>{ if(WPN[id]&&WPN[id].att) WPN[id].att[slot]=list; };
+  only('famas','stock',['std']); only('p50','stock',['std']); only('p50','mag',['std','ext']); only('m249','mag',['std','ext']); only('m249','stock',['std','heavy']);
+  only('microsmg','mag',['std','ext','quick','extq']); only('vector','mag',['std','ext','quick','extq']); only('p50','barrel',['std','long']);
+  only('m1','mag',['std']); only('m1','stock',['std']); only('m1','scope',['iron','reddot','x2','x3','x4']); only('heavysr','mag',['std','ext','quick']); only('piercesr','mag',['std','ext','quick']);
+  only('lightsr','scope',['x3','iron','reddot','holo','x2','x4','x6','x8']); only('heavysr','scope',['x4','iron','reddot','holo','x2','x3','x6','x8']); only('piercesr','scope',['x4','iron','reddot','holo','x2','x3','x6','x8']);
+  only('revolver','muzzle',['none']); only('revolver','mag',['std']); only('revolver','barrel',['std','long','short']); only('deagle','muzzle',['none','comp']); only('deagle','scope',['iron','reddot','x2']);
+  for(const id of ['lightsr','heavysr','piercesr']){ WPN[id].scope=false; WPN[id].zoom=0.72; }
+})();
+const attKey=a=>a?ATT_SLOTS.map(k=>a[k]||'').join(','):'';
+/* a complete, valid attachment set for a gun (unknown or unsupported choices fall back to what it ships with) */
+function attClean(id,a){ const w=WPN[id]; if(!w||!w.att) return null; const o={}; for(const k of ATT_SLOTS){ const list=w.att[k]||[]; o[k]=a&&list.includes(a[k])?a[k]:(list[0]||null); } return o; }
+/* the gun with its attachments applied: a copy of the weapon with changed numbers (cached) */
+const _wCache=new Map();
+function wpnWith(id,att){ const base=WPN[id]; if(!base) return null; if(!base.att) return base; const a=attClean(id,att), key=id+'|'+attKey(a); let w=_wCache.get(key); if(w) return w;
+  w=Object.assign({},base); w.attSet=a; w.attKey=key; w.adsSpd=1; let magMul=1;
+  for(const k of ATT_SLOTS){ const o=ATT[k][a[k]]; if(!o) continue;
+    for(const s of ['recoil','range','far','spread','speed','sw','reload','move']) if(o[s]) w[s]=w[s]*o[s];
+    if(o.adsSpd) w.adsSpd*=o.adsSpd; if(o.mag) magMul*=o.mag; if(o.silent) w.silent=true; if(o.noFlash) w.noFlash=true;
+    if(k==='scope'){ if(o.zoom) w.zoom=o.zoom; else if(o.z) w.zoom=base.zoom*o.z; w.scope=!!o.scope; w.optic=a[k]; } }
+  if(magMul!==1&&w.mag){ w.mag=Math.max(w.mag+1,Math.round(base.mag*magMul)); }
+  w.speed=+w.speed.toFixed(3); w.reload=+w.reload.toFixed(2); _wCache.set(key,w); return w; }
 const MAINS=Object.keys(WPN).filter(k=>WPN[k].slot==='main'), SIDES=Object.keys(WPN).filter(k=>WPN[k].slot==='side'), MELEES=Object.keys(WPN).filter(k=>WPN[k].slot==='melee');
+/* slot 1 and slot 2 take any firearm (the riot shield counts as one) */
+const GUNS=MAINS.concat(SIDES);
 
 const TH={
  rocket:{name:'로켓 발사기',count:2,armed:4,kind:'rocket',speed:45,r:4.5,dmg:110,desc:'바로 날아가는 로켓. 2발.'},
@@ -77,7 +147,6 @@ const PERKS={
  killregen:{name:'처치 회복',desc:'처치하면 즉시 체력 회복 시작'},
  extmag:{name:'확장 탄창',desc:'주무기 탄창 2배'},
  quickload:{name:'빠른 장전',desc:'재장전 시간 -40%'},
- overkill:{name:'오버킬',desc:'보조무기 칸에 주무기를 하나 더'},
  pockets:{name:'두둑한 주머니',desc:'시작 예비 탄약 2배'},
  eagle:{name:'매의 눈',desc:'미니맵 범위 +25%, 적 표시가 더 오래'},
  ghost:{name:'유령',desc:'쏴도 미니맵에 안 보이고 총소리가 작아요'},
@@ -111,3 +180,10 @@ const GG_LADDER=['m249','ak47','m4','scar','famas','g36','vector','p50','microsm
 const TEAM_COLORS=['#3d8bff','#ff5a4e'], TEAM_NAMES=['블루','레드'];
 const FFA_COLORS=['#3d8bff','#ff5a4e','#36d07a','#ffc23d','#b56bff','#38d5e0','#ff7ad1','#f4f1e8','#9cff4a','#ff9b3d','#7aa8ff','#c9a27a','#5ef0c3','#e86bff','#ffd95e','#8f99a8'];
 function seekerCount(n){ return n<=7?1:n<=14?2:3; }
+
+/* make sure the saved loadout only names things that exist (old saves, removed perks) */
+const isGun=id=>!!WPN[id]&&WPN[id].slot!=='tag'&&(WPN[id].mode!=='melee'||id==='shield');
+(()=>{ const D=DEFAULT_LOADOUT, L=prefs.loadout;
+  if(!isGun(L.main)) L.main=D.main; if(!isGun(L.side)||L.side===L.main) L.side=L.main===D.side?'deagle':D.side; if(!WPN[L.melee]||WPN[L.melee].slot!=='melee') L.melee=D.melee;
+  if(!TH[L.thr]) L.thr=D.thr; if(!SP[L.spec]) L.spec=D.spec;
+  L.perks=(Array.isArray(L.perks)?L.perks:D.perks).slice(0,2); while(L.perks.length<2) L.perks.push(D.perks[L.perks.length]); L.perks=L.perks.map((p,i)=>PERKS[p]?p:D.perks[i]); })();

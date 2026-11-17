@@ -29,10 +29,10 @@
 
 ## 하늘 HDRI (Poly Haven, CC0)
 
-- `desert` ← **Goegap** (`goegap`) · Greg Zaal
-- `plaza` ← **Kloofendal 48d Partly Cloudy (Pure Sky)** (`kloofendal_48d_partly_cloudy_puresky`) · Greg Zaal, Jarod Guest
+- `desert` ← **Qwantani Sunset (Pure Sky)** (`qwantani_sunset_puresky`) · Greg Zaal, Jarod Guest
+- `plaza` ← **Qwantani Dusk 2 (Pure Sky)** (`qwantani_dusk_2_puresky`) · Greg Zaal, Jarod Guest
 - `cyber` ← **Shanghai Bund** (`shanghai_bund`) · Greg Zaal
-- `factory` ← **Factory Yard** (`factory_yard`) · Sergej Majboroda
+- `factory` ← **Kloofendal 48d Partly Cloudy (Pure Sky)** (`kloofendal_48d_partly_cloudy_puresky`) · Greg Zaal, Jarod Guest
 
 ## 소품 3D 모델 (Poly Haven, CC0)
 

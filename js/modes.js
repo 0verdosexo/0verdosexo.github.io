@@ -63,6 +63,7 @@ const Modes=(()=>{
     if(Game.host){ stAcc+=dt; if(stAcc>0.5){ stAcc=0; broadcast(); } }
     /* local hold-to-interact: plant / defuse */
     for(const a of Game.actors){ if(!a.local||!a.alive) continue; const use=a===me?I.use:a.botUse;
+      if(a===me) Bus.emit('prompt',mode==='snd'&&M.roundState==='live'&&sndAction(a)?(sndAction(a).startsWith('plant')?'E 길게: 폭탄 설치':'E 길게: 폭탄 해체'):null);
       if(mode==='snd'&&M.roundState==='live'){ const key=sndAction(a); if(key&&use){ a.holdT=(a.holdT||0)+dt; const need=key.startsWith('plant')?3.5:6; if(a===me) Bus.emit('hold',{p:a.holdT/need,label:key.startsWith('plant')?'폭탄 설치 중':'해체 중'});
           if(a.holdT>=need){ a.holdT=0; Game.emit(key.startsWith('plant')?'plant':'defuse',{a:a.id,s:key.split(':')[1]}); } } else { a.holdT=0; if(a===me) Bus.emit('hold',null); } }
       if(mode==='pk'&&PK) pkCheck(a);

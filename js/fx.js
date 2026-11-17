@@ -51,7 +51,7 @@ const FX=(()=>{
     const DN=260; const dm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial({roughness:0.6,metalness:0.3}),DN); dm.count=0; dm.frustumCulled=false; dm.castShadow=false;
     dm.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(DN*3),3); scene.add(dm); debris={mesh:dm,list:[],N:DN};
     for(const L of lights) L.parent&&L.parent.remove(L); lights.length=0;
-    if(QUALITY.lights>0) for(let i=0;i<4;i++){ const L=new THREE.PointLight('#ffb060',0,12,2); L.userData.t=0; scene.add(L); lights.push(L); }
+    if(QUALITY.lights>=12) for(let i=0;i<2;i++){ const L=new THREE.PointLight('#ffb060',0,12,2); L.userData.t=0; scene.add(L); lights.push(L); }
   }
   function flashLight(x,y,z,color,int,dur,dist){ if(!lights.length) return; let L=lights.find(l=>l.userData.t<=0)||lights[0]; L.color.set(color); L.position.set(x,y,z); L.intensity=int; L.distance=dist||12; L.userData.t=dur; L.userData.d=dur; L.userData.i=int; }
   const _q=new THREE.Quaternion(), _m=new THREE.Matrix4(), _v=new THREE.Vector3(), _n=new THREE.Vector3(0,0,1), _s=new THREE.Vector3();

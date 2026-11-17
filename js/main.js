@@ -12,7 +12,8 @@
   UI.show('main',false); UI.showLoading(true,'맵 불러오는 중…');
   const NOBG=new URLSearchParams(location.search).get('nobg'); if(NOBG) UI.menuMap=async()=>{};
   if(new URLSearchParams(location.search).get('norender')){ const r0=R.render; R.render=()=>{ if(window.__renderOnce){ window.__renderOnce=false; r0(); } }; }
-  await UI.menuMap(prefs.tag&&prefs.tag.map||'fortress'); UI.showLoading(false);
+  prefs.tag.map=SandTag.okMap(prefs.tag.map); prefs.battle.map=SandTag.okMap(prefs.battle.map);
+  await UI.menuMap(prefs.battle.map); UI.showLoading(false);
   if(!prefs.name){ prefs.name='플레이어'+String((Math.random()*900+100)|0); savePrefs(); $('mName').value=prefs.name; }
   const room=new URLSearchParams(location.search).get('room'); if(room){ history.replaceState(null,'',location.pathname); setTimeout(()=>{ $('joinCode').value=room; $('joinBtn').click(); },300); }
   window.addEventListener('beforeunload',()=>{ if(Net.connected) Net.leave(); });
@@ -24,7 +25,7 @@ async function runSim(spec){
   const [kind,mode,map,n,secs,human]=spec.split(':'); const N=+n||8, S=+secs||60;
   Game._noLoop=true; const errs=[]; window.addEventListener('error',e=>errs.push(String(e.message)));
   const origErr=console.error; console.error=(...a)=>{ errs.push(a.map(String).join(' ').slice(0,300)); origErr(...a); };
-  const players=[{id:'me',name:'나',owner:'me',bot:human!=='1',diff:'hard',team:0,load:prefs.loadouts[0]}];
+  const players=[{id:'me',name:'나',owner:'me',bot:human!=='1',diff:'hard',team:0,load:myLoad()}];
   for(let i=1;i<N;i++) players.push({id:'b'+i,name:Bots.botName(i),bot:true,owner:'me',diff:['easy','normal','hard'][i%3],team:i%2,load:UI.randomLoadout()});
   let setup; if(kind==='tag'){ players.forEach((p,i)=>p.role=i<seekerCount(N)?'seek':'run'); if(new URLSearchParams(location.search).get('meRun')) { players[0].role='run'; players[N-1].role='seek'; } setup={kind:'tag',map,players,cfg:{diff:'normal',seekerGun:new URLSearchParams(location.search).get('gun')==='1',time:10}}; }
   else setup={kind:'battle',mode,map,players,cfg:{diff:'normal'}};
@@ -46,4 +47,4 @@ async function runSim(spec){
 /* version label: click for the change log; check for a newer deploy every 5 minutes */
 (()=>{ const v=$('ver'); v.style.pointerEvents='auto'; v.style.cursor='pointer'; v.title='업데이트 내역';
   v.onclick=()=>{ if(Game.active) return; UI.toast(GAME_CHANGES.slice(0,3).map(c=>'v'+c[0]+' — '+c[1]).join('\n'),7000); };
-  setInterval(()=>{ if(document.hidden) return; fetch('js/version.js?t='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{ const m=t.match(/GAME_VERSION='([^']+)'/); if(m&&m[1]!==GAME_VERSION){ v.textContent='v'+GAME_VERSION+' → 새 버전 v'+m[1]+' (새로고침)'; v.style.color='#ffb547'; v.onclick=()=>location.reload(); } }).catch(()=>{}); },300000); })();
+  setInterval(()=>{ if(document.hidden) return; fetch('js/version.js?t='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{ const m=t.match(/GAME_VERSION='([^']+)'/); if(m&&m[1]!==GAME_VERSION){ v.textContent='v'+GAME_VERSION+' → 새 버전 v'+m[1]+' (새로고침)'; v.style.color='#ff8a1f'; v.onclick=()=>location.reload(); } }).catch(()=>{}); },300000); })();

@@ -1,15 +1,16 @@
 {
  "desert": {
-  "id": "goegap",
-  "name": "Goegap",
+  "id": "qwantani_sunset_puresky",
+  "name": "Qwantani Sunset (Pure Sky)",
   "authors": {
-   "Greg Zaal": "All"
+   "Greg Zaal": "Original",
+   "Jarod Guest": "Sky edits"
   },
   "license": "CC0"
  },
  "plaza": {
-  "id": "kloofendal_48d_partly_cloudy_puresky",
-  "name": "Kloofendal 48d Partly Cloudy (Pure Sky)",
+  "id": "qwantani_dusk_2_puresky",
+  "name": "Qwantani Dusk 2 (Pure Sky)",
   "authors": {
    "Greg Zaal": "Original",
    "Jarod Guest": "Sky edits"
@@ -25,10 +26,11 @@
   "license": "CC0"
  },
  "factory": {
-  "id": "factory_yard",
-  "name": "Factory Yard",
+  "id": "kloofendal_48d_partly_cloudy_puresky",
+  "name": "Kloofendal 48d Partly Cloudy (Pure Sky)",
   "authors": {
-   "Sergej Majboroda": "All"
+   "Greg Zaal": "Original",
+   "Jarod Guest": "Sky edits"
   },
   "license": "CC0"
  }
