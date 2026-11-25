@@ -14,7 +14,9 @@ const ReloadAnim=(()=>{
     pump:'pump',heavysr:'bolt',piercesr:'bolt',p50:'p90',m249:'lmg',sawed:'break',m1:'clip',revolver:'rev',crossbow:'xbow',flintlock:'flint',mrl:'tube'};
   /* per gun: ea = what an empty reload adds (catch: bolt release, rackL / rackR: a hand pulls the charging handle, none); bp = bullpup */
   const CFG={famas:{ea:'rackL',bp:true},vector:{ea:'rackL'},smg9:{ea:'rackL'},falcon:{ea:'rackL'},microsmg:{ea:'rackL'},p50:{ea:'rackL'},snowcan:{ea:'none',snow:true}};
-  const has=id=>!!FAM[id];
+  /* guns added later name their family in data.js (rfam, rc) */
+  const famOf=id=>FAM[id]||(WPN[id]&&WPN[id].rfam)||null, cfgOf=id=>CFG[id]||(WPN[id]&&WPN[id].rc)||{};
+  const has=id=>!!famOf(id);
   const AIM=new Set(['p90','lmg','break','clip','rev','xbow','flint','tube']);
   const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
   const ss=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
@@ -72,8 +74,9 @@ const ReloadAnim=(()=>{
     P.userData.axis=W&&E?E.clone().sub(W).normalize():V3(-0.45,-0.77,0.45).normalize(); /* along the forearm: turning about it rolls the palm without swinging the arm */
     root.remove(arm); P.add(arm); arm.position.set(-at.x,-at.y,-at.z); root.add(P); P.userData.at=at.clone(); return P; }
   function hold(R,key,mesh,x,y,z){ if(!R.L||!mesh) return; mesh.visible=false; mesh.position.set(x,y,z); (R.aim?R.root:R.L).add(mesh); R.held[key]=mesh; }
-  function prep(vm){ const u=vm.gun.userData, fam=FAM[u.id]; if(!fam) return vm.rl=false;
-    const root=vm.group, R={fam,u,root,cfg:CFG[u.id]||{},n:-1,ev:new Set(),drops:[],sm:{},held:{},aim:AIM.has(fam)};
+  function prep(vm){ const u=vm.gun.userData, fam=famOf(u.id); if(!fam) return vm.rl=false;
+    if((fam==='ar'||fam==='ak'||fam==='pistol'||fam==='p90'||fam==='lmg'||fam==='tube')&&!u.mag) return vm.rl=false; if(fam==='break'&&!u.brl) return vm.rl=false; if(fam==='bolt'&&!u.bolt) return vm.rl=false; if(fam==='rev'&&!u.cyl) return vm.rl=false;
+    const root=vm.group, R={fam,u,root,cfg:cfgOf(u.id),n:-1,ev:new Set(),drops:[],sm:{},held:{},aim:AIM.has(fam)};
     if(u.mag){ const bb=boxOf(u.mag), top=u.magCenter?bb.getCenter(V3(0,0,0)):V3((bb.min.x+bb.max.x)/2,bb.max.y,(bb.min.z+bb.max.z)/2);
       for(const c of u.mag.children) c.position.sub(top); u.mag.position.copy(top); R.m0=top.clone(); R.mH=bb.max.y-bb.min.y; R.mC=V3(0,-(bb.max.y-bb.min.y)/2,0);
       R.mFront=bb.min.z-top.z; R.mBack=bb.max.z-top.z; }

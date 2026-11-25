@@ -91,7 +91,10 @@ const THEMES={
     ground:{tex:'asphalt',tile:5,rough:0.55,nor:1,color:'#b8b8c4'}, cliff:{tex:'concrete_cracked',tile:4,color:'#5a5868'}, cliffKind:'facade_city', void:'#05040a', night:true, rain:true},
   /* bright hazy day in an industrial yard: strong sun, crisp shadows, light haze in the distance */
   factory:{ hdri:'factory', exposure:0.95, fog:'#c3ccd4', fogD:[70,400], sun:{color:'#fff1d8',int:3.3,dir:[0.45,0.8,0.3]}, hemi:0.3, envInt:0.9, bgInt:1.0, bloom:[0.2,0.45,0.92],
-    ground:{tex:'pad',tile:6,nor:1.2,rough:0.9,color:'#a8a49b'}, road:{tex:'asphalt',tile:5,nor:1,rough:0.85,color:'#8d8d92'}, cliff:{tex:'precast',tile:4.2,nor:1.2,color:'#c9c5bb'}, cliffKind:'wall_factory', void:'#0a0806', dust:true, yard:true}
+    ground:{tex:'pad',tile:6,nor:1.2,rough:0.9,color:'#a8a49b'}, road:{tex:'asphalt',tile:5,nor:1,rough:0.85,color:'#8d8d92'}, cliff:{tex:'precast',tile:4.2,nor:1.2,color:'#c9c5bb'}, cliffKind:'wall_factory', void:'#0a0806', dust:true, yard:true},
+  /* overcast morning after rain on the steppe: flat grey light, low haze, wet ground */
+  kursk:{ hdri:'kursk', exposure:1.0, fog:'#a7adb3', fogD:[60,620], sun:{color:'#f6e7cf',int:1.65,dir:[0.42,0.66,0.55]}, hemi:0.36, envInt:0.8, bgInt:1.0, bloom:[0.12,0.45,0.95],
+    ground:{tex:'grass',tile:4.5,nor:1.0,rough:0.92,color:'#98996e'}, cliff:{tex:'rock_cliff',tile:8,color:'#6e5c48'}, cliffKind:'none', void:'#0a0806'}
 };
 /* building styles: exterior wall, interior side, floor, ceiling, roof top, trim (parapets/rails), pillar */
 const STYLES={

@@ -162,7 +162,7 @@ const Bots=(()=>{
         else if(w.mode!=='auto') b.plant=null;
         I.ads=w.mode!=='melee'&&dist>14&&w.cat!=='sg'; }
       /* movement while fighting */
-      const pref=w&&w.mode==='melee'?1.2:w&&w.cat==='sg'?6:w&&w.cat==='sr'?30:14;
+      const pref=w&&w.mode==='melee'?1.2:w&&w.cat==='sg'?6:w&&w.cat==='sr'?30:w&&w.cat==='dmr'?24:w&&(w.range||20)<10?6:14;
       const fw={x:(T.x-a.x)/(dist||1),z:(T.z-a.z)/(dist||1)}, side={x:-fw.z,z:fw.x};
       const lowHp=d.cover&&a.hp<38&&dist>5&&!(goal&&goal.urgent);
       const empty=s&&w&&w.mag&&s.mag===0&&s.res>0&&dist>8&&d.cover;
@@ -177,7 +177,7 @@ const Bots=(()=>{
         if(lat){ const px=a.x+side.x*lat*1.6, pz=a.z+side.z*lat*1.6; if(blockedAt(px,pz,a.y+0.3,PH-0.4)){ b.strafe=-b.strafe; lat=-lat; } }
         const vx=side.x*lat+fw.x*fwd2, vz=side.z*lat+fw.z*fwd2; b.want=(vx||vz)?{x:vx,z:vz}:null;
         if(a.diff==='hard'&&shooting&&b.plant&&dist>20&&w&&w.cat!=='sg') I.crouch=true;
-        if(a.diff!=='easy'&&dist>18&&w&&w.cat==='sr') I.crouch=true; }
+        if(a.diff!=='easy'&&dist>18&&w&&(w.cat==='sr'||w.cat==='dmr'||w.cat==='lmg')) I.crouch=true; }
       /* grenades at targets behind cover */
       if(Game.t>b.throwT&&a.thrLeft>0&&dist>7&&dist<24){ b.throwT=Game.t+rand(8,16); if(Math.random()<0.5) I.throwHit=true; }
     } else {

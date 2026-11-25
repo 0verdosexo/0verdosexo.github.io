@@ -7,6 +7,14 @@ const RAD=0.42, PH=1.75, PH_SLIDE=0.85, STEP=0.55, GRAV=24, JUMP_V=7.7, CLIMB_V=
 let MAP=null, W=0, H=0, G=new Uint8Array(0), WH=new Float32Array(0), LOWB=[], RAMPS=[], BOXES=[], ZONES=[], FLOORPAINT=[], DOOR=null, PORTALS=[],
     SPAWN_RUN=null, SPAWN_SEEK=null, ORBC=null, SOL=[], CS=[], NODES=[], CELLN=[], NW=0, NH=0, MAP_WARNINGS=[], BATTLE={}, LADDERS=[], GEN=null, MAP_MODE=null;
 const OBJS=new Map();
+/* terrain heightfield (v7.11): a map may dig below / raise above the y=0 ground with a raster of heights.
+   TERR={res,nx,nz,h:Float32Array}; terrH(x,z) is the ground height there (0 outside). SLOW: water and mud that slow you down. */
+let TERR=null, SLOW=[];
+function terrH(x,z){ if(!TERR) return 0; const i=Math.floor(x/TERR.res), j=Math.floor(z/TERR.res); return i<0||j<0||i>=TERR.nx||j>=TERR.nz?0:TERR.h[j*TERR.nx+i]; }
+/* highest terrain cell under a square footprint that is not above `lim`, and whether any cell is above it */
+function terrFoot(x,z,r,lim){ const R=TERR.res, i0=Math.max(0,Math.floor((x-r)/R)), i1=Math.min(TERR.nx-1,Math.floor((x+r)/R)), j0=Math.max(0,Math.floor((z-r)/R)), j1=Math.min(TERR.nz-1,Math.floor((z+r)/R));
+  let g=-60, over=false; for(let j=j0;j<=j1;j++) for(let i=i0;i<=i1;i++){ const h=TERR.h[j*TERR.nx+i]; if(h>lim) over=true; else if(h>g) g=h; } return {g,over}; }
+function slowAt(x,z,y){ for(const q of SLOW) if(x>=q.x0&&x<=q.x1&&z>=q.z0&&z<=q.z1&&y<=q.y) return q.mul; return 1; }
 let PK=null;                     // destructible objects by id
 const SMOKES=[];
 let OBJ_SEQ=1;
@@ -75,6 +83,7 @@ function afItem(def,type,x0,z0,rot,flip,col,R){ const T=AF_TYPES[type]; if(!T) r
 function placeAF(def){ for(const q of (def.place||[])){ const [type,x0,z0,rot,col,flip]=q; afItem(def,type,x0,z0,rot,flip,col); } }
 function setMapData(def,opts){
   opts=opts||{}; MAP=def; MAP_MODE=opts.mode||null; [W,H]=def.size;
+  TERR=def.terrain&&def.terrain.h?def.terrain:null; SLOW=def.slow||[];
   LOWB=def.lowBuildings||[]; ZONES=def.zones||[]; FLOORPAINT=def.floorPaint||[]; DOOR=def.door||null; PORTALS=def.portals||[];
   SPAWN_RUN=def.spawns.runner; SPAWN_SEEK=def.spawns.seeker; ORBC=def.orbs||{ground:[]}; BATTLE=def.battle||{};
   GEN=genBuildings(def);
@@ -102,7 +111,7 @@ function setMapData(def,opts){
   OBJS.clear(); OBJ_SEQ=1; SOL=[];
   for(const L of LOWB) SOL.push({t:'b',x0:L.c0*CELL,x1:L.c1*CELL,z0:L.r0*CELL,z1:L.r1*CELL,y0:0,y1:L.h,k:'low'});
   for(const b of BOXES){ const s=Object.assign({t:'b'},b); SOL.push(s); if(s.destr) registerObj(s); }
-  for(const r of RAMPS) SOL.push(Object.assign({t:'r',y0:(r.base||0)>0?r.base-0.3:0,y1:r.h,k:'ramp'},r));
+  for(const r of RAMPS) SOL.push(Object.assign({t:'r',y0:(r.base||0)!==0?Math.min(r.base,r.h)-0.3:0,y1:r.h,k:'ramp'},r));
   HW=W*CELL/HS; HH=H*CELL/HS; CS=Array.from({length:HW*HH},()=>[]);
   for(const s of SOL) indexSolid(s);
   if(MAP_MODE==='pk'&&BATTLE.parkour){
@@ -132,7 +141,7 @@ const isVoid=(x,z)=>{ const c=cellOf(x),r=cellOf(z); return inB(c,r)&&G[r*W+c]==
 const inB=(c,r)=>c>=0&&r>=0&&c<W&&r<H;
 const cellOf=v=>Math.floor(v/CELL);
 const ctr=(c,r)=>({x:c*CELL+CELL/2,z:r*CELL+CELL/2});
-const wallTop=(c,r)=>inB(c,r)&&G[r*W+c]===0?WH[r*W+c]:-1;
+const wallTop=(c,r)=>inB(c,r)&&G[r*W+c]===0?WH[r*W+c]:-99;
 const live=s=>s.alive!==false;
 function wallBlocks(c,r,door,feet){ if(!inB(c,r)) return true; const v=G[r*W+c]; if(v===2) return !door; if(v!==0) return false; return feet+STEP<WH[r*W+c]; }
 function rampH(s,x,z){
@@ -147,11 +156,12 @@ function cellSolids(x,z){ const c=Math.floor(x/HS),r=Math.floor(z/HS); return c>
 function blockedAt(x,z,feet,ph,door,r){
   r=r||RAD; const c0=cellOf(x-r),c1=cellOf(x+r),r0=cellOf(z-r),r1=cellOf(z+r);
   for(let rr=r0;rr<=r1;rr++)for(let cc=c0;cc<=c1;cc++) if(wallBlocks(cc,rr,door,feet)) return true;
+  if(TERR&&terrFoot(x,z,r,feet+STEP).over) return true;
   const L=cellSolids(x,z); if(!L) return true;
   for(const s of L){ if(!live(s)||!overl(s,x,z,r)||s.y0>=feet+ph-0.02) continue; if(topAt(s,x,z)>feet+STEP) return true; }
   return false;
 }
-function groundAt(x,z,feet,r){ r=r||RAD; let g=isVoid(x,z)?-60:0;
+function groundAt(x,z,feet,r){ r=r||RAD; let g=isVoid(x,z)?-60:TERR?terrFoot(x,z,r,feet+STEP+0.01).g:0;
   const c0=cellOf(x-r),c1=cellOf(x+r),r0=cellOf(z-r),r1=cellOf(z+r);
   for(let rr=r0;rr<=r1;rr++)for(let cc=c0;cc<=c1;cc++){ const t=wallTop(cc,rr); if(t>g&&t<=feet+STEP+0.01) g=t; }
   const L=cellSolids(x,z); if(!L) return g;
@@ -175,6 +185,7 @@ function physStep(e,dx,dz,dt,door){
     if(push>0.8){ e.climbing=true; e.vy=0; e.gr=false; e.y+=CLIMB_V*dt;
       if(e.y>=L.y1-0.12){ e.y=L.y1; e.x=L.x+f[0]*0.9; e.z=L.z+f[1]*0.9; e.gr=true; e.vy=0; e.climbing=false; }
       return 0; } }
+  if(SLOW.length){ const m=slowAt(e.x,e.z,e.y); dx*=m; dz*=m; }
   const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/0.45)); const sx=dx/steps, sz=dz/steps;
   for(let i=0;i<steps;i++){ if(sx&&!blockedAt(e.x+sx,e.z,e.y,e.ph,door)) e.x+=sx; if(sz&&!blockedAt(e.x,e.z+sz,e.y,e.ph,door)) e.z+=sz; }
   let landed=0;
@@ -191,9 +202,9 @@ function physStep(e,dx,dz,dt,door){
 }
 function headroom(e,ph){ return ceilingAt(e.x,e.z,e.y)>=e.y+ph; }
 /* point & ray tests. pointSolid returns false/true, pointObj returns the solid hit (for destructibles) */
-function pointHit(x,y,z){ const c=cellOf(x),r=cellOf(z); if(!inB(c,r)) return true; const v=G[r*W+c]; if(y<0&&v!==4) return true;
+function pointHit(x,y,z){ const c=cellOf(x),r=cellOf(z); if(!inB(c,r)) return true; const v=G[r*W+c]; if(y<(TERR?terrH(x,z):0)&&v!==4) return true;
   if(v===0&&y<=WH[r*W+c]) return true; if(v===2&&y<8) return true;
-  for(const s of cellSolids(x,z)){ if(!live(s)) continue; if(x>=s.x0&&x<=s.x1&&z>=s.z0&&z<=s.z1&&y>=s.y0&&y<=topAt(s,x,z)) return s; }
+  for(const s of cellSolids(x,z)){ if(!live(s)||s.pass) continue; if(x>=s.x0&&x<=s.x1&&z>=s.z0&&z<=s.z1&&y>=s.y0&&y<=topAt(s,x,z)) return s; }
   return false; }
 const pointSolid=(x,y,z)=>!!pointHit(x,y,z);
 function rayCast(ox,oy,oz,dx,dy,dz,maxD,pierceThin){
@@ -223,7 +234,7 @@ function buildNav(){
   const skipK={rail:1,slide:1,pillar:1,trunk:1,wall:1,parapet:1};
   for(let j=0;j<NH;j++)for(let i=0;i<NW;i++){
     const x=i*NS+NS/2, z=j*NS+NS/2, c=cellOf(x), r=cellOf(z), v=G[r*W+c]; if(v===2) continue;
-    const hs=new Map(); if(v===1) hs.set(0,null); if(v===0&&WH[r*W+c]<7.5) hs.set(WH[r*W+c],null);
+    const hs=new Map(); if(v===1){ let h=0; if(TERR){ h=terrH(x,z); for(let k=0;k<6;k++){ const g=groundAt(x,z,h); if(Math.abs(g-h)<1e-4) break; h=g; } h=+h.toFixed(3); } hs.set(h,null); } if(v===0&&WH[r*W+c]<7.5) hs.set(WH[r*W+c],null);
     for(const s of cellSolids(x,z)) if(!skipK[s.k]&&x>=s.x0&&x<=s.x1&&z>=s.z0&&z<=s.z1){ const h=+topAt(s,x,z).toFixed(3); if(!hs.has(h)||s.oid) hs.set(h,s.oid||hs.get(h)||null); }
     for(const [h,oid] of hs){ if(blockedAt(x,z,h,PH,false)||Math.abs(groundAt(x,z,h)-h)>0.05) continue;
       const n={i:NODES.length,gi:i,gj:j,x,z,h,e:[],oid}; NODES.push(n); CELLN[j*NW+i].push(n); }

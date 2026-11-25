@@ -3,12 +3,12 @@
 const UI=(()=>{
   let cur='main', stack=[], lastSetup=null, lobbySel=null, loSlot='main';
   const scr=n=>$('scr-'+n);
-  function show(n,push){ if(push!==false&&cur&&cur!==n&&n!=='game') stack.push(cur); if(n!=='loadout'&&typeof GunShow!=='undefined'&&GunShow.on) GunShow.close();
+  function show(n,push){ if(push!==false&&cur&&cur!==n&&n!=='game') stack.push(cur); if(n!=='loadout'&&typeof GunShow!=='undefined'&&GunShow.on) GunShow.close(); if(n!=='armory'&&typeof Armory!=='undefined'&&Armory.on) Armory.close();
     if(n==='lobby'&&cur==='loadout'&&Net.room) Net.setMine({load:myLoad()}); document.querySelectorAll('.scr').forEach(e=>e.classList.toggle('on',e.id==='scr-'+n)); cur=n;
     document.body.classList.toggle('ingame',n==='game'); if(n!=='game') closeOverlays(); else if(Game.active&&Game.paused&&Game.state!=='end') $('pause').classList.add('on');
     lobbyView(); Music.set(n!=='game'&&!Game.active);
     if(typeof KeysUI!=='undefined'){ if(n==='keys') KeysUI.render(); else KeysUI.stop(); }
-    if(n==='main') refreshMain(); if(n==='loadout') renderLoadout(); if(n==='battle') renderBattle(); if(n==='tag') renderTag(); if(n==='settings') renderSettings(); }
+    if(n==='main') refreshMain(); if(n==='loadout') renderLoadout(); if(n==='armory') Armory.open(); if(n==='battle') renderBattle(); if(n==='tag') renderTag(); if(n==='settings') renderSettings(); }
   function back(){ const p=stack.pop()||'main'; if(p==='lobby'&&!Net.room) return show('main',false);
     if(p==='game'&&cur==='loadout'&&Game.active){ Game.setMyLoad(myLoad()); show('game',false); if(!Game.paused&&!isTouch) Input.requestLock(); return; }
     show(p,false); }
@@ -43,7 +43,7 @@ const UI=(()=>{
     $('lbModePrev').onclick=()=>modeStep(-1); $('lbModeNext').onclick=()=>modeStep(1);
     $('lbMore').onclick=()=>{ Sfx.unlock(); if(kindNow()!=='range') show(kindNow()); }; $('hmStart').onclick=()=>startOffline(kindNow()); $('lbCreate').onclick=()=>{ if(kindNow()!=='range') createRoom(kindNow()); };
     $('navPlay').onclick=()=>show('main',false);
-    $('goLoadout').onclick=()=>show('loadout'); $('goSettings').onclick=()=>show('settings'); $('goBrowse').onclick=()=>openBrowse();
+    /* the main menu's loadout is the walk-through armory; the lobbies keep the list screen */ $('goLoadout').onclick=()=>{ Sfx.unlock(); show(typeof Armory!=='undefined'?'armory':'loadout'); }; $('goSettings').onclick=()=>show('settings'); $('goBrowse').onclick=()=>openBrowse();
     $('joinBtn').onclick=()=>joinRoom($('joinCode').value); $('joinCode').addEventListener('keydown',e=>{ if(e.key==='Enter') joinRoom($('joinCode').value); });
     document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{ Sfx.play('click'); back(); });
   }
@@ -115,7 +115,7 @@ const UI=(()=>{
     if(gun&&loSub!=='gun'){ $('loPickT').textContent=ATT_SLOT_NAMES[loSub]+' 고르기'; const A=gunAtt(id);
       for(const o of w.att[loSub]){ const a=Object.assign({},A,{[loSub]:o}); addPick(ATT[loSub][o].name,ATT[loSub][o].desc,A[loSub]===o,()=>{ prefs.gunAtt[id]=a; },{w:wpnWith(id,a),base:WPN[id]}); } }
     else if(gun||loSlot==='melee'){ $('loPickT').textContent=(gun?(loSlot==='main'?'1번':'2번')+' 총기':'근접 무기')+' 고르기';
-      const ids=gun?GUNS.concat(['shield']):MELEES, other=gun?L[loSlot==='main'?'side':'main']:null; let lastCat=null;
+      const ids=gun?gunsByCat(GUNS).concat(['shield']):MELEES, other=gun?L[loSlot==='main'?'side':'main']:null; let lastCat=null;
       for(const g of ids){ const x=WPN[g]; if(!x) continue; if(x.cat!==lastCat){ addCat(CATS[x.cat]||x.cat); lastCat=x.cat; }
         const b=addPick(x.name,g===other?'다른 칸에서 사용 중 · 누르면 서로 바꿔요':gunSub(g,x),L[loSlot]===g,()=>{ if(g===other) L[loSlot==='main'?'side':'main']=L[loSlot]; L[loSlot]=g; if(gun&&x.att) loSub='scope'; },{w:gun?wpnWith(g,gunAtt(g)):x,base:x}); if(g===other) b.classList.add('used'); } }
     else if(loSlot==='thr'){ $('loPickT').textContent='투척 고르기'; for(const t in TH) addPick(TH[t].name,`${TH[t].count}개`,L.thr===t,()=>{ L.thr=t; },{t:TH[t]}); }
@@ -141,7 +141,7 @@ const UI=(()=>{
     seg('sInv',prefs.invertY?1:0,v=>{ prefs.invertY=v==='1'; savePrefs(); }); $('sLayout').onclick=()=>BtnLayout.open(); $('sKeys').onclick=()=>show('keys'); seg('sAutoFire',prefs.autoFire===false?0:1,v=>{ prefs.autoFire=v==='1'; savePrefs(); }); seg('sAdsMode',prefs.adsMode==='hold'?'hold':'toggle',v=>{ prefs.adsMode=v; savePrefs(); }); seg('sDmgNum',prefs.dmgNum===false?0:1,v=>{ prefs.dmgNum=v==='1'; savePrefs(); }); seg('sAssist',prefs.aimAssist===false?0:1,v=>{ prefs.aimAssist=v==='1'; savePrefs(); }); seg('sGlow',prefs.glow==null?1:prefs.glow,v=>{ prefs.glow=+v; savePrefs(); R.setBloom(); }); seg('sAuto',prefs.gfxAuto===false?0:1,v=>{ prefs.gfxAuto=v==='1'; savePrefs(); }); seg('sFps',prefs.showFps?1:0,v=>{ prefs.showFps=v==='1'; savePrefs(); }); seg('sCross',prefs.crossColor||'#ffffff',v=>{ prefs.crossColor=v; savePrefs(); document.body.style.setProperty('--cross',v); }); }
   function applyCtrl(){ const t=prefs.ctrl==='touch'||(prefs.ctrl!=='kb'&&isTouch); document.body.classList.toggle('touch',t); }
   /* ---------- offline start ---------- */
-  function randomLoadout(R){ const r=R||Math.random; const pickR=a=>a[(r()*a.length)|0]; const L={name:'봇',main:pickR(MAINS),side:pickR(SIDES),melee:pickR(MELEES),thr:pickR(Object.keys(TH)),spec:pickR(Object.keys(SP).filter(k=>k!=='repair')),perks:[pickR(PERK_IDS),pickR(PERK_IDS)]};
+  function randomLoadout(R){ const r=R||Math.random; const pickR=a=>a[(r()*a.length)|0]; const L={name:'봇',main:pickR(MAINS.filter(k=>WPN[k].cat!=='other')),side:pickR(SIDES.filter(k=>WPN[k].cat==='pistol')),melee:pickR(MELEES),thr:pickR(Object.keys(TH)),spec:pickR(Object.keys(SP).filter(k=>k!=='repair')),perks:[pickR(PERK_IDS),pickR(PERK_IDS)]};
     /* bots carry a few random parts so their guns do not all look alike (never a long scope: they fight at every range) */
     const ra=id=>{ const w=WPN[id]; if(!w||!w.att) return null; const a={}; for(const k of ATT_SLOTS){ const list=(w.att[k]||[]).filter(o=>k!=='scope'||!ATT.scope[o].scope||o===w.att.scope[0]); a[k]=list.length&&r()<0.45?pickR(list):list[0]; } return attClean(id,a); };
     L.att=[ra(L.main),ra(L.side)]; return L; }
@@ -216,7 +216,9 @@ const UI=(()=>{
     Bus.on('chat',d=>{ const line=d.sys?`<div class="sys">${d.m}</div>`:`<div><b>${esc(d.n)}</b> ${esc(d.m)}</div>`; const L=$('lbChatLog'); L.insertAdjacentHTML('beforeend',line); L.scrollTop=1e9; });
     Bus.on('kicked',why=>{ toast(why||'방에서 나왔어요'); if(Game.active) Game.stop(); show('main',false); stack=[]; });
     Bus.on('hostleft',()=>{ toast('방장이 나가서 방이 닫혔어요'); Net.leave(); if(Game.active) Game.stop(); show('main',false); stack=[]; });
-    Bus.on('netstart',setup=>{ startOnline(setup); });
+    Bus.on('netstart',setup=>{ /* the match started without us (the host had lost our connection): say so instead of a broken match */
+      if(!setup||!setup.players||!setup.players.some(p=>p.id===Net.myId)){ toast('게임이 내 자리 없이 시작됐어요. 다시 들어가 주세요'); Net.leave(); show('main',false); stack=[]; return; }
+      startOnline(setup); });
     Bus.on('netback',()=>{ if(Game.active) Game.stop(); show('lobby',false); renderLobby(); });
   }
   function copy(t){ try{ navigator.clipboard.writeText(t); }catch(_){ const i=document.createElement('input'); i.value=t; document.body.appendChild(i); i.select(); document.execCommand('copy'); i.remove(); } }

@@ -66,9 +66,23 @@ const R=(()=>{
     const e=await Assets.env(th.hdri,QUALITY.bigBg);
     if(e.hdr){ const pm=new THREE.PMREMGenerator(renderer); const rt=pm.fromEquirectangular(e.hdr); if(envTex) envTex.dispose(); envTex=rt.texture; scene.environment=envTex; e.hdr.dispose(); pm.dispose();
       scene.environmentIntensity=th.envInt; vmScene.environment=envTex; vmScene.environmentIntensity=Math.max(0.7,th.envInt); }
-    if(e.bg){ scene.background=e.bg; scene.backgroundIntensity=th.bgInt; scene.backgroundBlurriness=0; }
+    if(th.overcast){ scene.background=overcastSky(th); scene.backgroundIntensity=1; if(e.bg&&e.bg.dispose) e.bg.dispose(); }
+    else if(e.bg){ scene.background=e.bg; scene.backgroundIntensity=th.bgInt; scene.backgroundBlurriness=0; }
     return e;
   }
+  /* a painted overcast sky (equirectangular): low cloud deck, a darker band of distant forest, smoke columns on the horizon */
+  let skyTex=null;
+  function overcastSky(th){ if(skyTex) return skyTex; const W2=2048, H2=1024, c=document.createElement('canvas'); c.width=W2; c.height=H2; const g=c.getContext('2d'), R=mulberry(1943);
+    const gr=g.createLinearGradient(0,0,0,H2/2); gr.addColorStop(0,'#7d8489'); gr.addColorStop(0.55,'#9aa0a3'); gr.addColorStop(0.93,'#b7bab7'); gr.addColorStop(1,'#bdbfba'); g.fillStyle=gr; g.fillRect(0,0,W2,H2);
+    for(let i=0;i<900;i++){ const y=R()*H2*0.46, x=R()*W2, rw=60+R()*260, rh=14+R()*46*(1-y/(H2*0.5)); const l=R()<0.5?'rgba(70,76,82,':'rgba(205,208,206,'; g.fillStyle=l+(0.05+R()*0.07)+')'; g.beginPath(); g.ellipse(x,y,rw,rh,0,0,7); g.fill(); g.beginPath(); g.ellipse(x-W2,y,rw,rh,0,0,7); g.fill(); }
+    /* thin smoke plumes leaning with the wind, low on the horizon */
+    for(let k=0;k<6;k++){ const x0=120+k*W2/6+R()*140, base=H2*0.5-10, top=H2*(0.36-R()*0.05), lean=(R()<0.5?-1:1)*(40+R()*60);
+      for(let i=0;i<46;i++){ const t=i/46, y=base-(base-top)*t, x=x0+lean*t*t, r=4+t*22; g.fillStyle=`rgba(${58+t*55|0},${58+t*55|0},${60+t*52|0},${0.26*(1-t)})`; g.beginPath(); g.ellipse(x,y,r*1.3,r*0.8,0,0,7); g.fill(); } }
+    /* far tree line: dark, low and ragged */
+    g.fillStyle='#3e4637'; g.beginPath(); g.moveTo(0,H2*0.5); for(let x=0;x<=W2;x+=3) g.lineTo(x,H2*0.5-3-(Math.sin(x*0.011)*0.5+0.6)*5-(R()<0.3?R()*6:R()*2.5)); g.lineTo(W2,H2*0.52); g.lineTo(0,H2*0.52); g.fill();
+    const hz=g.createLinearGradient(0,H2*0.4,0,H2*0.52); hz.addColorStop(0,'rgba(184,188,186,0)'); hz.addColorStop(1,'rgba(184,188,186,0.75)'); g.fillStyle=hz; g.fillRect(0,H2*0.4,W2,H2*0.12);
+    g.fillStyle='#55584f'; g.fillRect(0,H2*0.52,W2,H2*0.48);
+    skyTex=new THREE.CanvasTexture(c); skyTex.mapping=THREE.EquirectangularReflectionMapping; skyTex.colorSpace=THREE.SRGBColorSpace; return skyTex; }
   /* keep the sun's shadow box centred on the camera, snapped to shadow texels to avoid shimmering */
   const _v=new THREE.Vector3();
   function updateSun(){

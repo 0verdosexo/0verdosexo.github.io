@@ -86,7 +86,7 @@ const HUD=(()=>{
     const cr=$('hCross'); const scoped=w&&WPN[w.id]&&Guns&&me.adsT>0.85&&(w.scope); $('hScope').style.display=scoped&&me.alive?'block':'none'; if(!!(scoped&&me.alive)!==scopedCls){ scopedCls=!scopedCls; document.body.classList.toggle('scoped',scopedCls); }
     if(me.alive&&w&&w.mode!=='melee'&&!scoped&&(Game.kind==='battle'||(me.role==='seek'&&Game.cfg.seekerGun))){ cr.style.display=''; const sp=spreadOf(me,w); const h=innerHeight; const px=clamp(Math.tan(sp)/Math.tan(R.camera.fov*Math.PI/360)*h/2,2,120)+(me.adsT>0.6?0:3);
       const q=cr.children; q[0].style.top=(-px-8)+'px'; q[1].style.top=px+'px'; q[2].style.left=(-px-8)+'px'; q[3].style.left=px+'px'; /* sniper rifles have no crosshair until you look through the scope (CS2 AWP style) */
-      const noX=SNIPERS.has(w.id); for(let i=0;i<4;i++) q[i].style.opacity=noX||me.adsT>0.6&&w.cat!=='sg'?0:1; }
+      const noX=SNIPERS.has(w.id)||w.cat==='sr'; for(let i=0;i<4;i++) q[i].style.opacity=noX||me.adsT>0.6&&w.cat!=='sg'?0:1; }
     else if(me.alive&&(Game.kind==='tag'||w&&w.mode==='melee')){ cr.style.display=''; const q=cr.children; for(let i=0;i<4;i++) q[i].style.opacity=0; } else cr.style.display='none';
     /* hit marker / damage */
     { const ls=me.alive&&w&&w.laser&&me.adsT<0.35&&me.switchT<=0&&me.reloadT<=0, e=$('hLaser'); if(ls!==laserOn){ laserOn=ls; e.style.display=ls?'block':'none'; } }
@@ -150,7 +150,7 @@ const HUD=(()=>{
     fall:'M28 2h8v9h6l-10 8-10-8h6z'};
   function wKind(id){ if(!id) return 'boom'; if(id==='fall'||id==='void') return 'fall'; if(id==='barrel'||id==='bomb') return 'boom'; if(TH[id]) return 'grenade';
     const map={m249:'lmg',mrl:'rocket',crossbow:'bow',shuriken:'star',snowcan:'snow',knife:'knife',axe:'axe',fists:'fists',shield:'shield',flintlock:'pistol',m1:'sniper',lightsr:'sniper',heavysr:'sniper',piercesr:'sniper',tagpistol:'pistol'};
-    if(map[id]) return map[id]; const w=WPN[id]; if(!w) return 'boom'; return {ar:'rifle',smg:'smg',sg:'shotgun',pistol:'pistol',sr:'sniper'}[w.cat]||'rifle'; }
+    if(map[id]) return map[id]; const w=WPN[id]; if(!w) return 'boom'; if(w.icon&&WPATH[w.icon]) return w.icon; return {ar:'rifle',smg:'smg',sg:'shotgun',pistol:'pistol',sr:'sniper',dmr:'sniper',lmg:'lmg'}[w.cat]||'rifle'; }
   const wIcon=id=>`<svg class="wi" viewBox="0 0 64 20"><path d="${WPATH[wKind(id)]}"/></svg>`;
   const SKULL='M10 1.6a7.4 7.4 0 017.4 7.4c0 2.7-1.4 4.4-2.7 5.3V18H5.3v-3.7C4 13.4 2.6 11.7 2.6 9A7.4 7.4 0 0110 1.6zM6.9 7.6a1.9 1.9 0 100 3.8 1.9 1.9 0 000-3.8zm6.2 0a1.9 1.9 0 100 3.8 1.9 1.9 0 000-3.8zM8.5 18v-2.2h1V18zm2 0v-2.2h1V18z';
   const HS_ICON=`<svg class="hsi" viewBox="0 0 20 20"><path fill-rule="evenodd" d="${SKULL}"/></svg>`;

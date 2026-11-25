@@ -46,7 +46,7 @@ const Sfx=(()=>{
     if(!out(s,o)) return; s.start(0,o.offset||0); if(o.dur) s.stop(ctx.currentTime+o.dur); }
   function gunProf(w,sup){ if(sup||w.silent) return 'sup'; const id=w.id;
     if(id==='heavysr'||id==='piercesr') return 'sniper'; if(id==='m1'||id==='lightsr'||id==='falcon'||id==='m249') return id==='m249'?'rifle':'dmr';
-    if(id==='deagle'||id==='revolver'||id==='flintlock') return 'magnum'; return {pistol:'pistol',smg:'smg',sg:'shotgun',ar:'rifle',sr:'dmr'}[w.cat]||'rifle'; }
+    if(id==='deagle'||id==='revolver'||id==='flintlock') return 'magnum'; return {pistol:'pistol',smg:'smg',sg:'shotgun',ar:'rifle',lmg:'rifle',dmr:'dmr',sr:'dmr'}[w.cat]||'rifle'; }
   /* one gunshot: the recording (trimmed + level-matched, low end lifted for your own gun) + crack + body + low boom + echo.
      o: {x,y,z,dist,vol,sup,local}. Far shots keep their echo relatively longer, like real gunfire across a map. */
   function gun(w,o){ if(!ctx||!master||!w) return; o=o||{}; const name=w.snd, P=GPROF[gunProf(w,o.sup)], S=GSMP[name]||{g:1}, t=ctx.currentTime, local=!!o.local;

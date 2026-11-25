@@ -31,6 +31,7 @@ function actorSpeed(a){
 /* ---------- movement (players & bots) ---------- */
 function moveActor(a,I,dt){
   if(!a.alive) return;
+  if(a.mount&&typeof Mounts!=='undefined'){ Mounts.pin(a); return; }
   if(a.jailed&&Game.kind==='tag'){ I=NOINTENT; }
   const frozen=(Game.kind==='tag'&&a.role==='seek'&&(a.gunReloadT>0||(Tag.info()&&Tag.info().release>0)))||Game.freeze;
   let speed=actorSpeed(a); if(frozen) speed=0;

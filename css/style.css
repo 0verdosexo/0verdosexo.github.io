@@ -628,3 +628,53 @@ body.touch.rangemode #hComp{display:none}
 .kb-slot.wait{border-color:var(--acc);color:var(--acc);background:rgba(255,138,31,.1);animation:kbPulse 1s ease-in-out infinite}
 @keyframes kbPulse{50%{box-shadow:0 0 0 3px rgba(255,138,31,.22)}}
 @media (max-width:560px){.kb-row{grid-template-columns:1fr 1fr;row-gap:4px}.kb-name{grid-column:1/-1}}
+
+/* ---------- armory (3D loadout) ---------- */
+body.armoryview canvas#c{visibility:visible!important}body.armoryview #menuShade{opacity:0}
+body.armoryview:not(.ingame){background:#0b0c0e}
+#scr-armory{background:none;padding:0;pointer-events:auto}
+#arHud{position:absolute;inset:0;pointer-events:none;font-family:var(--font)}
+#arHud button{pointer-events:auto}
+#arRoom{position:absolute;left:22px;top:18px;display:flex;flex-direction:column;gap:2px;text-shadow:0 1px 3px #000}
+#arRoom small{font-size:11px;letter-spacing:.18em;color:var(--acc);font-weight:800}
+#arRoom b{font-size:24px;font-weight:900;letter-spacing:-.01em}
+#arRoom span{font-size:12.5px;color:#cfd3d8;max-width:46vw}
+#arCross{position:absolute;left:50%;top:50%;width:0;height:0}
+#arCross i{position:absolute;left:-3px;top:-3px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.55)}
+#arPrompt{position:absolute;left:50%;top:calc(50% + 34px);transform:translateX(-50%);display:none;align-items:center;gap:10px;padding:7px 14px 7px 8px;border-radius:10px;background:rgba(14,14,17,.78);border:1px solid rgba(255,138,31,.45);font-size:14.5px;font-weight:700;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+#arPrompt.on{display:flex}
+#arPrompt kbd{font-family:inherit;font-size:12px;font-weight:900;min-width:26px;text-align:center;padding:3px 7px;border-radius:6px;background:var(--acc);color:#111}
+#arInfo{position:absolute;right:20px;bottom:20px;width:280px;padding:12px 14px;border-radius:12px;background:rgba(14,14,17,.8);border:1px solid var(--line);display:none}
+#arInfo.on{display:block}
+#arInfo h3{margin:0 0 3px;font-size:17px;font-weight:900}
+#arInfo p{margin:0 0 8px;font-size:12px;color:var(--muted);line-height:1.45}
+#arInfo p.ok{color:var(--ok);font-weight:700;margin:6px 0 0}#arInfo p.no{color:var(--red);font-weight:700;margin:6px 0 0}#arInfo p.note{color:var(--acc);margin:6px 0 0}
+#arInfo .st{margin:5px 0}#arInfo .st span{display:flex;justify-content:space-between;font-size:11.5px;color:#c9ccd1}#arInfo .st span b{color:#fff}
+#arInfo .st i{display:block;height:4px;border-radius:2px;background:rgba(255,255,255,.1);margin-top:3px;overflow:hidden}#arInfo .st i b{display:block;height:100%;background:var(--acc)}
+#arLoad{position:absolute;left:20px;bottom:20px;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100vw - 340px)}
+#arLoad div{padding:6px 10px;border-radius:9px;background:rgba(14,14,17,.72);border:1px solid var(--line);display:flex;flex-direction:column;min-width:74px}
+#arLoad div.on{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+#arLoad small{font-size:10.5px;color:var(--muted);font-weight:700}#arLoad b{font-size:13.5px;font-weight:800}#arLoad em{font-style:normal;font-size:10.5px;color:var(--acc);max-width:220px}
+#arToast{position:absolute;left:50%;top:84px;transform:translate(-50%,-8px);padding:9px 16px;border-radius:10px;background:rgba(14,14,17,.86);border:1px solid rgba(255,138,31,.5);font-weight:800;font-size:14.5px;opacity:0;transition:opacity .18s,transform .18s;white-space:nowrap}
+#arToast.on{opacity:1;transform:translate(-50%,0)}
+#arMenu{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(6,7,9,.55);pointer-events:auto}
+#arMenu.on{display:flex}
+#arMenu .box{width:min(460px,92vw);padding:22px 24px;border-radius:16px;background:var(--panel);border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#arMenu small{color:var(--acc);font-weight:800;letter-spacing:.16em;font-size:11px}#arMenu h2{margin:2px 0 8px;font-size:26px;font-weight:900}
+#arMenu p{margin:0 0 12px;color:#c4c8ce;font-size:13.5px;line-height:1.55}
+.ar-help{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}.ar-help span{font-size:12px;padding:5px 8px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:#d4d7dc}.ar-help b{color:var(--acc);margin-right:5px}
+#arMenu .btns{display:flex;gap:8px;flex-wrap:wrap}#arMenu .btns .btn{flex:1 1 120px}
+#arTouch{display:none;position:absolute;inset:0;pointer-events:auto;touch-action:none}
+body.touch #arTouch{display:block}
+#arJoy{position:absolute;left:40px;bottom:60px;width:120px;height:120px;border-radius:50%;border:2px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);opacity:.55;pointer-events:none}
+#arJoy.on{opacity:1}#arJoy i{position:absolute;left:36px;top:36px;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.35)}
+#arUse{position:absolute;right:26px;bottom:110px;width:86px;height:86px;border-radius:50%;border:2px solid var(--acc);background:rgba(255,138,31,.22);color:#fff;font-weight:900;font-size:17px;font-family:var(--font)}
+#arSlots{position:absolute;right:126px;bottom:40px;display:flex;gap:8px}
+#arSlots button,#arMenuBtn{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:rgba(14,14,17,.7);color:#fff;font-weight:900;font-size:16px;font-family:var(--font)}
+#arSlots button.on{border-color:var(--acc);color:var(--acc)}
+#arMenuBtn{position:absolute;right:16px;top:14px}
+body.touch #arInfo{top:66px;bottom:auto;right:10px;width:200px;padding:8px 10px}body.touch #arInfo .st{display:none}body.touch #arInfo h3{font-size:14px}body.touch #arInfo p{font-size:11px;margin-bottom:2px}
+body.touch #arLoad{bottom:auto;top:92px;left:16px;max-width:56vw;gap:4px}body.touch #arLoad div{min-width:54px;padding:3px 7px}body.touch #arLoad em{display:none}body.touch #arLoad b{font-size:12px}body.touch #arLoad small{font-size:9.5px}
+body.touch #arUse{bottom:84px;right:22px;width:78px;height:78px}body.touch #arRoom b{font-size:20px}body.touch #arRoom span{font-size:11px}
+body.touch #arPrompt{top:auto;bottom:210px}
+@media (max-width:760px){ #arInfo{display:none!important} #arLoad{max-width:calc(100vw - 40px)} }

@@ -65,7 +65,7 @@ const Range=(()=>{
     I.walk=a.dmode===3; moveActor(a,I,dt); }
   /* ---------- weapons: the buy menu, everything free ---------- */
   const COLS=()=>{ const by=c=>Object.keys(WPN).filter(k=>WPN[k].cat===c&&WPN[k].slot!=='tag'&&WPN[k].mode!=='melee');
-    return [{name:'권총',items:by('pistol')},{name:'기관단총',items:by('smg')},{name:'산탄총',items:by('sg')},{name:'돌격소총',items:by('ar')},{name:'정밀 사격',items:by('sr')},
+    return [{name:'권총',items:by('pistol')},{name:'기관단총',items:by('smg')},{name:'산탄총',items:by('sg')},{name:'돌격소총',items:by('ar')},{name:'기관총',items:by('lmg')},{name:'지정사수',items:by('dmr')},{name:'저격총',items:by('sr')},
       {name:'특수·근접',items:by('other').concat(['shield','knife','axe','fists'].filter((k,i,a)=>WPN[k]&&a.indexOf(k)===i&&!by('other').includes(k)))},{name:'투척',items:Object.keys(TH)}]; };
   function held(k){ const me=ME(); return !!me&&(me.slots.some(s=>s.id===k)||me.load.thr===k); }
   function give(k){ const me=ME(); if(!me) return; const L=me.load;

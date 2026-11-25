@@ -62,7 +62,7 @@ const Interact=(()=>{
   const battle=()=>Game.kind==='battle'&&Game.mode!=='gg'&&Game.mode!=='pk';
   function nearSup(a){ if(!battle()||!a.alive) return null; for(const s of SUP) if(Math.abs(a.y-s.y)<0.6&&Math.hypot(a.x-s.x,a.z-s.z)<1.25&&!(a.supCd&&a.supCd[s.i]>Game.t)) return s; return null; }
   /* text for the "hold E" prompt, or null */
-  function promptFor(a){ return nearSup(a)?'E 길게: 보급 받기':null; }
+  function promptFor(a){ return nearSup(a)?'E 길게: 보급 받기':(typeof Mounts!=='undefined'?Mounts.promptFor(a):null); }
   function give(a,s){ for(const sl of a.slots){ const w=sl.w||WPN[sl.id]; if(w&&w.mag){ sl.mag=sl.max; if(w.res) sl.res=Math.max(sl.res,w.res); } }
     const th=a.load&&TH[a.load.thr]; if(th) a.thrLeft=Math.max(a.thrLeft,th.count); a.hp=Math.min(a.maxHp,a.hp+50); (a.supCd=a.supCd||{})[s.i]=Game.t+SUP_CD; a.supHold=0;
     if(a===Game.me){ Bus.emit('hold',null); Sfx.play('reload_rifle',{vol:0.8}); HUD.toast('보급 완료: 탄약 가득 · 체력 +50'); FX.ring(s.x,s.y+0.3,s.z,'#4dff8a',1.2); } }

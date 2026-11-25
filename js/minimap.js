@@ -5,6 +5,8 @@ const Minimap=(()=>{
   function build(){ cv=$('hMini'); g=cv.getContext('2d'); const w=W*CELL*PX, h=H*CELL*PX; base=document.createElement('canvas'); base.width=w; base.height=h; const b=base.getContext('2d');
     b.fillStyle='#1b222c'; b.fillRect(0,0,w,h);
     for(let r=0;r<H;r++) for(let c=0;c<W;c++){ const v=G[r*W+c]; b.fillStyle=v===1||v===3?'#3a4452':v===4?'#06080b':v===2?'#3dff8a':'#141920'; b.fillRect(c*CELL*PX,r*CELL*PX,CELL*PX+0.5,CELL*PX+0.5); }
+    if(TERR){ const T=TERR; for(let j=0;j<T.nz;j++) for(let i=0;i<T.nx;i++){ const h=T.h[j*T.nx+i]; if(h>-0.35&&h<0.3) continue;
+        b.fillStyle=h<-1.5?'#161b22':h<-0.35?'#28303b':'#46505e'; b.fillRect(i*T.res*PX,j*T.res*PX,T.res*PX+0.3,T.res*PX+0.3); } }
     for(const z of ZONES){ b.fillStyle='rgba(255,210,31,0.22)'; b.fillRect(z.c0*CELL*PX,z.r0*CELL*PX,(z.c1-z.c0)*CELL*PX,(z.r1-z.r0)*CELL*PX); }
     const sorted=SOL.filter(s=>s.t==='b'&&s.k!=='pk').sort((a,c)=>a.y1-c.y1);
     for(const s of sorted){ if(s.k==='slab'||s.k==='roof'){ b.fillStyle='rgba(120,135,155,0.35)'; } else if(s.k==='wall'||s.k==='parapet'){ b.fillStyle='#c9d2de'; } else if(s.k==='rail') continue; else b.fillStyle=s.y1>1.4?'#6b7788':'#56606e';

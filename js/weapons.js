@@ -22,6 +22,7 @@ function equip(a){
 /* ---------- per-frame weapon logic (owner side) ---------- */
 function weaponUpdate(a,I,dt){
   if(!a.alive) return;
+  if(a.mount&&typeof Mounts!=='undefined'){ Mounts.weapon(a,I,dt); return; }
   a.fireCD-=dt; a.cycleT-=dt; a.specCd-=dt; a.bloom=Math.max(0,a.bloom-dt*2.2);
   recoilRecover(a,dt);
   if(Game.kind==='tag'){ tagGunUpdate(a,I,dt); return; }
@@ -69,7 +70,7 @@ function switchTo(a,i){ a.prev=a.cur; a.cur=i; a.reloadT=0; a.burstLeft=0; a.ads
 function spreadOf(a,w){ let s=w.spread*(Math.PI/180);
   const mv=Math.min(1,Math.hypot(a.vx,a.vz)/RUN_SPEED); s*=1+w.move*mv*(a.adsT>0.5?0.5:(a.shT||0)>0.5?0.75:1); if(!a.gr) s*=1.8; if(a.crouch) s*=0.75;
   s*=lerp(w.hip||1,w.ads,Math.max(a.adsT,0.55*(a.shT||0))); s*=Math.pow(0.6,perkN(a.load,'steady')); s*=1+a.bloom; if(a.stunT>0) s*=2; return s; }
-function muzzlePos(a){ const d=aimDir(a), r={x:Math.cos(a.yaw),z:-Math.sin(a.yaw)}; const side=a.adsT>0.5?0.02:(a.shT||0)>0.5?0.08:0.16;
+function muzzlePos(a){ if(a.mount&&typeof Mounts!=='undefined'){ const p=Mounts.muzzle(a); if(p) return p; } const d=aimDir(a), r={x:Math.cos(a.yaw),z:-Math.sin(a.yaw)}; const side=a.adsT>0.5?0.02:(a.shT||0)>0.5?0.08:0.16;
   return {x:a.x+d.x*0.6+r.x*side,y:eyeY(a)-0.12+d.y*0.6,z:a.z+d.z*0.6+r.z*side}; }
 /* ---------- recoil recovery ----------
    recoilP / recoilY = how far the shots have moved the view (pitch up / yaw) and not yet come back.
@@ -259,9 +260,10 @@ function projHitWorld(P,h){
   if(n.y>0.6&&Math.abs(P.vy)<1.2){ P.vy=0; P.vx*=0.8; P.vz*=0.8; P.y=h.y+0.02; if(Math.hypot(P.vx,P.vz)<0.4){ P.vx=P.vz=0; P.stuck=true; P.stuckT=P.t; } }
 }
 /* owner: projectile explodes → everyone handles 'boom' */
-function boom(P){ if(P.dead) return; P.dead=true; if(!isFinite(P.x)||!isFinite(P.y)||!isFinite(P.z)) return; const def=P.def||(P.k==='microrocket'?{kind:'micro',r:WPN.mrl.splash.r,dmg:WPN.mrl.splash.dmg}:P.k==='rocket'?TH.rocket:TH.frag);
-  let dmg=def.dmg||0; if(P.k==='microrocket'){ const dist=Math.hypot(P.x-P.start.x,P.z-P.start.z); dmg=WPN.mrl.splash.dmg*(0.6+Math.min(1,dist/40)*0.8); }
-  Game.emit('boom',{id:P.id,a:P.a,k:P.k==='grenade'?'frag':P.k,x:+P.x.toFixed(2),y:+P.y.toFixed(2),z:+P.z.toFixed(2),r:def.r||3,d:Math.round(dmg),w:P.k==='microrocket'?'mrl':P.k}); }
+function boom(P){ if(P.dead) return; P.dead=true; if(!isFinite(P.x)||!isFinite(P.y)||!isFinite(P.z)) return; const pw=WPN[P.w], spl=(pw&&pw.splash)||WPN.mrl.splash; /* grenade launchers carry their own blast */
+  const def=P.def||(P.k==='microrocket'?{kind:'micro',r:spl.r,dmg:spl.dmg}:P.k==='rocket'?TH.rocket:TH.frag);
+  let dmg=def.dmg||0; if(P.k==='microrocket'&&(!pw||pw.revFall)){ const dist=Math.hypot(P.x-P.start.x,P.z-P.start.z); dmg=spl.dmg*(0.6+Math.min(1,dist/40)*0.8); }
+  Game.emit('boom',{id:P.id,a:P.a,k:P.k==='grenade'?'frag':P.k,x:+P.x.toFixed(2),y:+P.y.toFixed(2),z:+P.z.toFixed(2),r:def.r||3,d:Math.round(dmg),w:P.k==='microrocket'?(pw?P.w:'mrl'):P.k}); }
 /* all clients */
 function onBoom(b){
   const P=Game.projs.find(p=>p.id===b.id); if(P){ P.dead=true; }

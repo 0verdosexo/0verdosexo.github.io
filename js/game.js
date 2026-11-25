@@ -10,14 +10,14 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
   const fovBase=()=>{ const h=prefs.hfov||100, asp=Math.max(0.5,innerWidth/Math.max(1,innerHeight)); return Math.min(80,2*Math.atan(Math.tan(h*Math.PI/360)/asp)*180/Math.PI); };
   /* ---------- start / stop ---------- */
   Game.start=async function(S){
-    Game.stop(true); Music.set(false);
+    Game.stop(true); Music.set(false); if(typeof Armory!=='undefined') Armory.free();
     Object.assign(Game,{active:true,kind:S.kind,mode:S.kind==='tag'?'tag':S.mode,mapId:S.map,cfg:Object.assign({},S.cfg||{}),host:!!S.host,online:!!S.online,myId:S.myId,seed:S.seed||1,
       t:0,state:'loading',stateT:0,projs:[],deps:[],actors:[],byId:new Map(),me:null,freeze:true,paused:false,spectate:null,result:null,round:0});
     Game.teamMode=S.kind==='tag'?false:!!BMODES[S.mode].team;
     /* loading screen: picture of the chosen map behind, percent in the corner */
     UI.loadBg(S.map); UI.showLoading(true,'맵 불러오는 중…'); UI.loadPct(2); await new Promise(r=>setTimeout(r,30));
     const def=SandTag.maps[S.map]; setMapData(def,{mode:Game.mode}); SMOKES.length=0;
-    const th=THEMES[def.theme]; await R.setTheme(th); { const night=(th.sun&&th.sun.int||1)<1.5; Avatars.setVis(night?{rim:0.52,lift:0.09,mul:1,fog:0.5}:{rim:0.22,lift:0,mul:0.72,fog:0.45}); } UI.loadPct(14); await new Promise(r=>setTimeout(r,0)); await World.build(def,th); FX.init(); Interact.build(); UI.loadPct(46); await Avatars.init(); UI.loadPct(50);
+    const th=THEMES[def.theme]; await R.setTheme(th); { const night=(th.sun&&th.sun.int||1)<1.5; Avatars.setVis(night?{rim:0.52,lift:0.09,mul:1,fog:0.5}:{rim:0.22,lift:0,mul:0.72,fog:0.45}); } UI.loadPct(14); await new Promise(r=>setTimeout(r,0)); await World.build(def,th); FX.init(); Interact.build(); Mounts.build(); UI.loadPct(46); await Avatars.init(); UI.loadPct(50);
     for(let i=0;i<120&&Assets.done<Assets.pending;i++){ UI.showLoading(true,`질감 불러오는 중… ${Assets.done}/${Assets.pending}`); UI.loadPct(50+28*Assets.done/Math.max(1,Assets.pending)); await new Promise(r=>setTimeout(r,100)); }
     UI.loadPct(78);
     /* actors */
@@ -58,7 +58,7 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
   }catch(e){ console.warn('warm-up',e); } }
   Game.stop=function(silent){ cancelAnimationFrame(raf); if(!Game.active) return; Game.active=false; Input.setEnabled(false); Input.exitLock(); Sfx.stopAmbience();
     for(const a of Game.actors) if(a.av) a.av.dispose(); for(const P of Game.projs) if(P.mesh) R.scene.remove(P.mesh); for(const D of Game.deps) if(D.mesh) R.scene.remove(D.mesh);
-    if(vm){ R.vmCam.remove(vm.group); vm=null; vmId=null; } if(Game.kind==='tag') Tag.cleanup(); else Modes.cleanup(); Interact.clear(); FX.clear(); HUD.stop(); };
+    if(vm){ R.vmCam.remove(vm.group); vm=null; vmId=null; } if(Game.kind==='tag') Tag.cleanup(); else Modes.cleanup(); Interact.clear(); Mounts.clear(); FX.clear(); HUD.stop(); };
   function colorOf(a){ if(Game.kind==='tag') return a.role==='seek'?'#ff4d3d':'#3d8bff'; return Game.teamMode?TEAM_COLORS[a.team]:FFA_COLORS[Game.actors.indexOf(a)%FFA_COLORS.length]; }
   /* which outfit: 0 = black SWAT operator, 1 = balaclava / grey top / olive trousers. One per team (tag: seekers are the SWAT side; free-for-all alternates). */
   function lookOf(a){ if(!a) return 0; if(Game.kind==='tag') return a.role==='seek'?0:1; const mine=prefs.char?1:0;
@@ -157,12 +157,12 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
     if(o.hp>=o.max*0.5){ /* don't restore onto a player */ const s=o.s; if(Game.actors.some(a=>a.alive&&a.x+RAD>s.x0&&a.x-RAD<s.x1&&a.z+RAD>s.z0&&a.z-RAD<s.z1&&a.y<s.y1&&a.y+a.ph>s.y0)) return;
       o.alive=true; s.alive=true; World.restoreObj(d.o); } }
   /* ---------- network state ---------- */
-  function packState(a){ const s=curSlot(a); let f=(a.alive?1:0)|(a.crouch?2:0)|(a.slideT>0?4:0)|(a.ads?8:0)|(a.gr?16:0)|(a.jailed?32:0)|(a.escaped?64:0)|(a.climbing?128:0)|(a.emote>Game.t?256:0)|(a.tool?512:0);
+  function packState(a){ const s=curSlot(a); let f=(a.alive?1:0)|(a.crouch?2:0)|(a.slideT>0?4:0)|(a.ads?8:0)|(a.gr?16:0)|(a.jailed?32:0)|(a.escaped?64:0)|(a.climbing?128:0)|(a.emote>Game.t?256:0)|(a.tool?512:0)|(a.mount?1024:0);
     return [a.id,+a.x.toFixed(2),+a.y.toFixed(2),+a.z.toFixed(2),+a.yaw.toFixed(3),+a.pitch.toFixed(3),f,s?s.id:'',Math.round(a.hp),a.revealT>Game.t?1:0]; }
   function netState(d){ for(const s of d.s){ const a=Game.byId.get(s[0]); if(!a||a.local) continue;
       a.net={x:s[1],y:s[2],z:s[3],yaw:s[4],pitch:s[5],f:s[6],w:s[7],t:Game.t}; a.hp=s[8]; if(s[9]) a.revealT=Game.t+1.6;
       const al=!!(s[6]&1); if(al&&!a.alive&&a.deadT>0.5){ a.alive=true; if(a.av) a.av.revive(); }
-      a.jailed=!!(s[6]&32); a.escaped=!!(s[6]&64);
+      a.jailed=!!(s[6]&32); a.escaped=!!(s[6]&64); a.mountNet=!!(s[6]&1024);
       if(a.av&&s[7]!==a.curW){ a.curW=s[7]; const id=s[7]==='tagpistol'?'p1912':s[7]||null; a.av.setGun(id,attOf(a,id)); } } }
   function sendStates(){ const own=Game.actors.filter(a=>a.local); if(!own.length) return; Net.send('state',{s:own.map(packState)},true); }
   function interpRemote(a,dt){ const n=a.net; if(!n) return; const k=Math.min(1,dt*14);
@@ -214,7 +214,7 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
     const T1=P?performance.now():0;
     updateProjs(dt); updateDeps(dt);
     for(let i=SMOKES.length-1;i>=0;i--) if(SMOKES[i].until<Game.t) SMOKES.splice(i,1);
-    if(Game.kind==='tag') Tag.update(dt,I); else Modes.update(dt,I); Interact.update(dt,I);
+    if(Game.kind==='tag') Tag.update(dt,I); else Modes.update(dt,I); Interact.update(dt,I); Mounts.update(dt,I);
     const T2=P?performance.now():0;
     if(Game.online){ sendAcc+=dt; if(sendAcc>=0.085){ sendAcc=0; sendStates(); } }
     updateCamera(me,dt,I); updateAvatars(dt); updateViewmodel(me,dt,I);
@@ -300,6 +300,7 @@ const Game={active:false,kind:'battle',mode:'tdm',mapId:'fortress',cfg:{},actors
     if(!me) return; let id=null; const s=curSlot(me);
     if(me.alive&&!Game.paused){ if(me.tool) id='repair'; else if(me.carry==='drive') id='knife'; else if(s) id=s.id; }
     if(Game.kind==='tag'&&!(me.role==='seek'&&Game.cfg.seekerGun)) id=null;
+    if(me.mount||window.__nogun) id=null;
     const att=s&&id===s.id?s.att:null, vk=id?id+'|'+attKey(att):null;
     if(vk!==vmId){ if(vm){ R.vmCam.remove(vm.group); } vm=id?getVM(id,att):null; vmId=vk; if(vm){ R.vmCam.add(vm.group); vm.group.position.set(HIP.x,HIP.y-0.25,HIP.z); vm.group.rotation.set(0,0,0); } }
     /* safety net: the model must be in the view-model camera, and one bad number must not hide it for good */

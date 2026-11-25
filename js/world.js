@@ -57,7 +57,47 @@ const World=(()=>{
     chrome:()=>new THREE.MeshStandardMaterial({color:'#ddd',roughness:0.15,metalness:1}),
     pkPlat:()=>new THREE.MeshStandardMaterial({color:'#2b2f3a',roughness:0.4,metalness:0.4}),
     voidDark:()=>new THREE.MeshBasicMaterial({color:TH.void}),
+    /* v7.11 terrain & field-works looks */
+    'ter:splat':()=>splatMat(),
+    'ter:skirt':()=>Assets.pbr('ter:skirt',{tex:'grass_path_2',tile:1,color:'#a9a78c',rough:1,nor:0.8,env:0.45}),
+    'ter:roof':()=>Assets.pbr('ter:roof',{tex:'roof_slates_02',tile:2.2,color:'#c9c4bc',rough:0.9,nor:1.2}),
+    'ter:burlap':()=>Assets.pbr('ter:burlap',{tex:'rough_linen',tile:0.7,color:'#d6c39a',rough:0.97,nor:1.8,env:0.6}),
+    'ter:bark':()=>Assets.pbr('ter:bark',{tex:'bark_brown_02',tile:1.2,color:'#b8a892',rough:0.95,nor:1.4}),
+    'ter:mud':()=>Assets.pbr('ter:mud',{tex:'brown_mud_02',tile:3.2,color:'#cfc2b0',rough:1,nor:1.3,env:0.55}),
+    'ter:trench':()=>Assets.pbr('ter:trench',{tex:'brown_mud_02',tile:2.4,color:'#9c7c5e',rough:0.85,nor:1.2,env:0.6}),
+    'ter:road':()=>Assets.pbr('ter:road',{tex:'brown_mud_02',tile:3.6,color:'#d8c8b4',rough:1,nor:1.1,env:0.55}),
+    'ter:wet':()=>Assets.pbr('ter:wet',{tex:'brown_mud_03',tile:2.6,color:'#8a7a6a',rough:0.6,nor:1.0,env:0.8}),
+    'ter:bank':()=>Assets.pbr('ter:bank',{tex:'excavated_soil_wall',tile:2.6,color:'#c4b29c',rough:0.97,nor:1.4}),
+    'ter:conc':()=>Assets.pbr('ter:conc',{tex:'concrete_cracked',tile:1.8,color:'#a2a4a1',rough:0.92,nor:1.2}),
+    'ter:stone':()=>Assets.pbr('ter:stone',{tex:'damaged_plaster',tile:2.8,color:'#ece6da',rough:0.95,nor:1.3}),
+    'ter:brick':()=>Assets.pbr('ter:brick',{tex:'brick',tile:2.4,color:'#b98a76',rough:0.9}),
+    'ter:plank':()=>Assets.pbr('ter:plank',{tex:'old_planks_02',tile:1.7,color:'#e2ccad',rough:0.92,nor:1.4}),
+    'ter:plankOld':()=>canvasMat('ter:plankOld',2,(g,w,h)=>{ const R=mulberry(31); g.fillStyle='#4a3826'; g.fillRect(0,0,w,h);
+      for(let i=0;i<10;i++){ const y=i*h/10; g.fillStyle=`hsl(30,${28+R()*12}%,${20+R()*9}%)`; g.fillRect(0,y+1,w,h/10-2); for(let k=0;k<26;k++){ g.fillStyle='rgba(20,10,4,.25)'; g.fillRect(R()*w,y+2+R()*(h/10-5),15+R()*50,1); }
+        g.fillStyle='rgba(0,0,0,.45)'; g.fillRect(0,y,w,1.5); }
+      for(const x of [0.06,0.56]){ g.fillStyle='#2e2216'; g.fillRect(x*w,0,w*0.07,h); g.fillStyle='rgba(255,220,170,.06)'; g.fillRect(x*w+2,0,3,h); }
+      const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(0.75,'rgba(40,28,18,.15)'); gr.addColorStop(1,'rgba(52,40,28,.6)'); g.fillStyle=gr; g.fillRect(0,0,w,h); },0.92),
+    'ter:wicker':()=>canvasMat('ter:wicker',1.6,(g,w,h)=>{ g.fillStyle='#3a2d1e'; g.fillRect(0,0,w,h); const R=mulberry(41), rows=16, posts=6;
+      for(let r=0;r<rows;r++){ const y=r*h/rows; for(let c=0;c<posts;c++){ const x0=c*w/posts, up=(r+c)%2; g.fillStyle=`hsl(36,${30+R()*14}%,${30+R()*12}%)`;
+          g.beginPath(); g.moveTo(x0,y+(up?2:h/rows-2)); g.quadraticCurveTo(x0+w/posts/2,y+(up?h/rows+1:-1),x0+w/posts,y+(up?2:h/rows-2)); g.lineTo(x0+w/posts,y+(up?h/rows-1:1)); g.quadraticCurveTo(x0+w/posts/2,y+(up?h/rows:0),x0,y+(up?h/rows-1:1)); g.fill(); } }
+      for(let c=0;c<=posts;c++){ g.fillStyle='#24190f'; g.fillRect(c*w/posts-3,0,6,h); }
+      const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0.7,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(50,40,28,.65)'); g.fillStyle=gr; g.fillRect(0,0,w,h); },0.95),
+    'ter:logs':()=>canvasMat('ter:logs',1.6,(g,w,h)=>{ const R=mulberry(51); g.fillStyle='#2a1f15'; g.fillRect(0,0,w,h); const n=7;
+      for(let i=0;i<n;i++){ const y=i*h/n, gr=g.createLinearGradient(0,y,0,y+h/n); const l=24+R()*8; gr.addColorStop(0,`hsl(28,30%,${l-10}%)`); gr.addColorStop(0.45,`hsl(30,32%,${l+6}%)`); gr.addColorStop(1,`hsl(26,30%,${l-12}%)`);
+        g.fillStyle=gr; g.fillRect(0,y+1,w,h/n-2); for(let k=0;k<20;k++){ g.fillStyle='rgba(15,8,3,.3)'; g.fillRect(R()*w,y+3+R()*(h/n-7),20+R()*60,1.2); } } },0.9),
+    'ter:duck':()=>Assets.pbr('ter:duck',{tex:'old_planks_02',tile:1.2,color:'#a88a68',rough:0.9,nor:1.3}),
+    'ter:duckOld':()=>canvasMat('ter:duckOld',1,(g,w,h)=>{ g.fillStyle='#1e1710'; g.fillRect(0,0,w,h); const R=mulberry(61);
+      for(let i=0;i<8;i++){ const y=i*h/8; g.fillStyle=`hsl(32,${26+R()*10}%,${24+R()*8}%)`; g.fillRect(0,y+3,w,h/8-6); g.fillStyle='rgba(60,45,30,.5)'; g.fillRect(0,y+h/8-8,w,4); } },0.75),
+    'ter:bags':()=>canvasMat('ter:bags',1.2,(g,w,h)=>{ g.fillStyle='#57503d'; g.fillRect(0,0,w,h); const R=mulberry(71), rows=4;
+      for(let r=0;r<rows;r++){ const y=r*h/rows, off=r%2?w/4:0; for(let c=-1;c<2;c++){ const x=off+c*w/2; const gr=g.createRadialGradient(x+w/4,y+h/rows/2,4,x+w/4,y+h/rows/2,w/3);
+          const l=48+R()*10; gr.addColorStop(0,`hsl(42,24%,${l}%)`); gr.addColorStop(1,`hsl(40,20%,${l-20}%)`); g.fillStyle=gr; g.beginPath(); g.ellipse(x+w/4,y+h/rows/2,w/4-3,h/rows/2-3,0,0,7); g.fill();
+          g.strokeStyle='rgba(30,24,14,.5)'; g.lineWidth=2; g.stroke(); } }
+      for(let i=0;i<1200;i++){ g.fillStyle=`rgba(${R()<0.5?255:0},${R()<0.5?240:0},${R()<0.5?200:0},.05)`; g.fillRect(R()*w,R()*h,2,2); } },0.97),
+    'ter:boards':()=>canvasMat('ter:boards',2.4,(g,w,h)=>{ g.fillStyle='#3b3128'; g.fillRect(0,0,w,h); const R=mulberry(81), n=12;
+      for(let i=0;i<n;i++){ const x=i*w/n; g.fillStyle=`hsl(28,${10+R()*10}%,${24+R()*12}%)`; g.fillRect(x+1,0,w/n-2,h); for(let k=0;k<10;k++){ g.fillStyle='rgba(0,0,0,.22)'; g.fillRect(x+2+R()*(w/n-6),R()*h,1,20+R()*60); } } },0.9),
   };
+  /* a material from a canvas texture that repeats every `tile` metres (uvs are in metres) */
+  function canvasMat(key,tile,draw,rough){ const t=Assets.canvasTex(256,256,draw,true); t.repeat.set(1/tile,1/tile); return new THREE.MeshStandardMaterial({map:t,roughness:rough!=null?rough:0.85}); }
   /* ---------- merged geometry buckets ---------- */
   class Bucket{ constructor(key,shadow){ this.key=key; this.p=[]; this.n=[]; this.uv=[]; this.i=[]; this.shadow=shadow!==false; }
     quad(a,b,c,d,n,ua,ub,uc,ud){ const k=this.p.length/3; this.p.push(...a,...b,...c,...d); for(let j=0;j<4;j++) this.n.push(...n); this.uv.push(...ua,...ub,...uc,...ud); this.i.push(k,k+1,k+2,k,k+2,k+3); }
@@ -79,6 +119,56 @@ const World=(()=>{
   }
   const all=m=>({all:m});
   /* break up texture tiling on large surfaces: world-space low-frequency brightness variation */
+  /* v7.11 ground: every terrain top shares one material; a world-space mask (R grass, G wetness, B scorch, A wet mud) blends real mud, wet mud and grass */
+  function terrMask(){ const T=TERR; if(T._mask) return T._mask; const Rs=T.res, nx=T.nx, nz=T.nz, PX=4, w=Math.round(nx*Rs*PX), h=Math.round(nz*Rs*PX), D=new Uint8Array(w*h*4);
+    const hsh=(x,y)=>{ const n=Math.sin(x*127.1+y*311.7)*43758.5453; return n-Math.floor(n); };
+    const vn=(x,y)=>{ const i=Math.floor(x), j=Math.floor(y), f=x-i, g=y-j, u=f*f*(3-2*f), v=g*g*(3-2*g); return (hsh(i,j)*(1-u)+hsh(i+1,j)*u)*(1-v)+(hsh(i,j+1)*(1-u)+hsh(i+1,j+1)*u)*v; };
+    const GB=[0.4,0.18,0,0.02,0], WV=[0.1,0.5,0.2,0.7,1], cl=v=>v<0?0:v>1?1:v;
+    /* bare, trodden mud within ~3 m of any trench */
+    const near=new Uint8Array(nx*nz), tmp=new Uint8Array(nx*nz), RR=6; for(let j=0;j<nz;j++){ let last=-1e9; for(let i=0;i<nx;i++){ if(T.mat&&T.mat[j*nx+i]===2) last=i; if(i-last<=RR) tmp[j*nx+i]=1; } last=1e9; for(let i=nx-1;i>=0;i--){ if(T.mat&&T.mat[j*nx+i]===2) last=i; if(last-i<=RR) tmp[j*nx+i]=1; } }
+    for(let i=0;i<nx;i++){ let last=-1e9; for(let j=0;j<nz;j++){ if(tmp[j*nx+i]) last=j; if(j-last<=RR) near[j*nx+i]=1; } last=1e9; for(let j=nz-1;j>=0;j--){ if(tmp[j*nx+i]) last=j; if(last-j<=RR) near[j*nx+i]=1; } }
+    for(let py=0;py<h;py++) for(let px=0;px<w;px++){ const x=(px+0.5)/PX, z=(py+0.5)/PX, ci=Math.min(nx-1,Math.floor(x/Rs)), cj=Math.min(nz-1,Math.floor(z/Rs)), c=cj*nx+ci, mt=T.mat?T.mat[c]:0, hh=T.h[c];
+      const n1=vn(x*0.085,z*0.085)*0.6+vn(x*0.19+5.2,z*0.19+1.3)*0.4, n2=vn(x*0.42+31,z*0.42+7), n3=vn(x*0.2+11,z*0.2+57);
+      let g=cl(((n1*0.72+n2*0.28)+(GB[mt]||0)-0.84)*4.5); if(hh<-0.3&&mt!==2) g*=0.5; if(mt===1) g*=0.55;
+      let v=cl((WV[mt]||0)+(n3-0.5)*0.5); if(mt===1) v=cl(0.42+(n3-0.5)*1.9+(n2-0.5)*0.6);
+      if(near[c]&&mt!==2){ g*=0.12; v=Math.max(v,0.45+n2*0.3); }
+      let wet=mt===4?0.2+n2*0.2:mt===2?0.08+n3*0.22:0; if(mt===1||mt===3){ const pd=vn(x*0.16+71,z*0.16+3)*0.75+n2*0.25; wet=Math.max(wet,(pd-0.68)*5.5); }
+      const k=(py*w+px)*4; D[k]=g*255; D[k+1]=cl(wet)*255; D[k+2]=0; D[k+3]=cl(v)*255; }
+    const put=(x,z,r,f)=>{ for(let py=Math.max(0,Math.floor((z-r)*PX));py<Math.min(h,Math.ceil((z+r)*PX));py++) for(let px=Math.max(0,Math.floor((x-r)*PX));px<Math.min(w,Math.ceil((x+r)*PX));px++){ const X=(px+0.5)/PX, Z=(py+0.5)/PX, d=Math.hypot(X-x,Z-z)/r; if(d<1) f((py*w+px)*4,d,X,Z); } };
+    const mx=(k,ch,v)=>{ v=v<0?0:v>255?255:v; if(v>D[k+ch]) D[k+ch]=v; };
+    for(const d of (T.decals||[])){
+      if(d.t==='puddle') put(d.x,d.z,d.r*1.5,(k,q,x,z)=>{ const e=q+(vn(x*1.1,z*1.1)-0.5)*0.45; mx(k,1,(1.2-e)*1.3*255); D[k]*=cl(e*1.2-0.2); mx(k,3,210); });
+      else if(d.t==='scorch') put(d.x,d.z,d.r,(k,q,x,z)=>{ const e=q+(vn(x*0.8+4,z*0.8)-0.5)*0.55; if(e<1){ mx(k,2,(1-e)*1.6*(d.a||0.8)*255); D[k]*=cl(e*0.9); } });
+      else if(d.t==='rut'){ const P=d.pts, ww=d.w||0.85; for(let i=0;i+1<P.length;i++){ const [x0,z0]=P[i],[x1,z1]=P[i+1], L=Math.hypot(x1-x0,z1-z0)||1, nxp=-(z1-z0)/L, nzp=(x1-x0)/L;
+          for(let st=0;st<=L;st+=0.25){ const cx=x0+(x1-x0)*st/L, cz=z0+(z1-z0)*st/L; for(const o of [-ww,ww]) put(cx+nxp*o,cz+nzp*o,0.36,(k,q)=>{ D[k]*=q*0.4; mx(k,3,250); mx(k,1,(1-q)*(d.wet||0.5)*1.25*255); mx(k,2,(1-q)*70); }); } } } }
+    const tex=new THREE.DataTexture(D,w,h,THREE.RGBAFormat); tex.magFilter=THREE.LinearFilter; tex.minFilter=THREE.LinearMipmapLinearFilter; tex.generateMipmaps=true; tex.needsUpdate=true;
+    T._mask={tex,data:D,w,h,px:PX}; return T._mask; }
+  function splatMat(){ const mk=terrMask(), src=(k,t)=>Assets.pbr(k,{tex:t,tile:1,color:'#ffffff'}), A=src('tsp:mud','brown_mud_02'), B2=src('tsp:wet','brown_mud_03'), C2=src('tsp:grass','grass_path_2');
+    const nm=!!(A.normalMap&&B2.normalMap&&C2.normalMap), m=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,metalness:0,envMapIntensity:0.9});
+    const U={tMask:{value:mk.tex},uMaskS:{value:new THREE.Vector2(1/(TERR.nx*TERR.res),1/(TERR.nz*TERR.res))},tA:{value:A.map},tB:{value:B2.map},tC:{value:C2.map},nA:{value:A.normalMap||A.map},nB:{value:B2.normalMap||A.map},nC:{value:C2.normalMap||A.map}};
+    m.onBeforeCompile=sh=>{ Object.assign(sh.uniforms,U);
+      sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vSW; varying vec3 vSN;').replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvSW=(modelMatrix*vec4(transformed,1.0)).xyz; vSN=normalize(mat3(modelMatrix)*objectNormal);');
+      sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>
+        varying vec3 vSW; varying vec3 vSN; uniform sampler2D tMask,tA,tB,tC,nA,nB,nC; uniform vec2 uMaskS; float sG,sW,sV,sS,sD;
+        float shh(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+        float snz(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(shh(i),shh(i+vec2(1,0)),f.x),mix(shh(i+vec2(0,1)),shh(i+vec2(1,1)),f.x),f.y); }
+        vec3 at(sampler2D t,vec2 p,float s){ vec2 q=vec2(p.x*0.8-p.y*0.6,p.x*0.6+p.y*0.8); return mix(texture2D(t,p/s).rgb,texture2D(t,q/(s*2.3)+0.37).rgb,smoothstep(0.3,0.7,snz(p*0.07))); }`)
+      .replace('#include <map_fragment>',`{ vec2 wp=vSW.xz; vec4 mk=texture2D(tMask,wp*uMaskS); float hv=snz(wp*0.9);
+          vec3 a=at(tA,wp,3.3), b=at(tB,wp,2.6), c=at(tC,wp,3.0); float lc=dot(c,vec3(0.33));
+          sV=mk.a; sS=mk.b; sG=smoothstep(0.38,0.62,mk.r+(lc-0.28)*0.7+(hv-0.5)*0.22);
+          float slope=1.0-clamp(vSN.y,0.0,1.0); sG*=1.0-smoothstep(0.3,0.65,slope)*0.6;
+          vec3 col=mix(a*vec3(0.86,0.74,0.62),b*vec3(0.78,0.64,0.48),sV); col=mix(col,c*vec3(0.33,0.4,0.22),sG);
+          sD=smoothstep(0.06,0.45,mk.g); col*=mix(1.0,0.66,sD);
+          sW=smoothstep(0.55,0.78,mk.g+(hv-0.5)*0.12); col=mix(col,col*0.22+vec3(0.012,0.013,0.014),sW*0.9);
+          col*=mix(1.0,0.35,sS); col=mix(col,vec3(0.04,0.036,0.03),sS*0.3);
+          col*=mix(0.74,1.18,snz(wp*0.03))*mix(0.92,1.06,snz(wp*0.23+7.0)); { float dry=smoothstep(0.55,0.8,snz(wp*0.021+11.0))*(1.0-sV)*(1.0-sD); col=mix(col,col*vec3(1.18,1.1,0.98),dry*0.25); } col*=mix(vec3(1.06,0.98,0.9),vec3(0.9,0.95,1.02),snz(wp*0.012+3.0));
+          diffuseColor.rgb*=col; }`)
+      .replace('#include <roughnessmap_fragment>',`float roughnessFactor=mix(mix(mix(0.96,0.82,sV),0.97,sG),0.55,sD*0.6); roughnessFactor=mix(roughnessFactor,0.13,sW);`);
+      if(nm) sh.fragmentShader=sh.fragmentShader.replace('#include <normal_fragment_maps>',`{ vec2 wp=vSW.xz; vec3 na=texture2D(nA,wp/3.3).xyz*2.0-1.0, nb=texture2D(nB,wp/2.6).xyz*2.0-1.0, nc=texture2D(nC,wp/3.0).xyz*2.0-1.0;
+          vec3 tn=mix(mix(na,nb,sV),nc,sG); tn.xy*=1.3*(1.0-sW);
+          vec3 N=normalize(vSN), T=normalize(vec3(1.0,0.0,0.0)-N*N.x), Bn=cross(T,N); vec3 nw=normalize(T*tn.x+Bn*tn.y+N*max(tn.z,0.25));
+          normal=normalize((viewMatrix*vec4(nw,0.0)).xyz); }`); };
+    m.customProgramCacheKey=()=>'splat'+(nm?1:0); m.name='ter:splat'; return m; }
   function macro(m,amt,scale,rock){ if(m.userData.macro) return m; m.userData.macro=true; const prev=m.onBeforeCompile;
     m.onBeforeCompile=(sh)=>{ if(prev) prev(sh); sh.uniforms.uMacro={value:new THREE.Vector2(amt,scale)};
       sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWPm;').replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvWPm=(modelMatrix*vec4(transformed,1.0)).xyz;');
@@ -92,7 +182,7 @@ const World=(()=>{
           diffuseColor.rgb*=mix(0.84,1.06,band)*mix(vec3(0.94,0.97,1.0),vec3(1.08,0.98,0.9),mnoise(vec2(sy*0.7,3.0)));
           diffuseColor.rgb*=mix(0.55,1.0,smoothstep(-0.5,3.0,vWPm.y));`:'')+` }`); };
     m.customProgramCacheKey=()=>'macro'+amt+'_'+scale+(rock?'r':''); m.needsUpdate=true; return m; }
-  function flush(parent){ for(const k in B){ const b=B[k]; if(!b.i.length) continue; const mm=mat(b.key); if(b.key==='th:ground'||b.key==='th:cliff') macro(mm,b.key==='th:ground'?0.32:0.28,b.key==='th:ground'?0.045:0.06,b.key==='th:cliff'&&TH.cliffKind==='rock');
+  function flush(parent){ for(const k in B){ const b=B[k]; if(!b.i.length) continue; const mm=mat(b.key); if(TERR&&/^ter:(plank|logs|bank|wicker|conc)$/.test(b.key)) macro(mm,0.26,0.32); if(b.key==='th:ground'||b.key==='th:cliff') macro(mm,b.key==='th:ground'?0.32:0.28,b.key==='th:ground'?0.045:0.06,b.key==='th:cliff'&&TH.cliffKind==='rock'); if(b.key==='ter:mud'||b.key==='ter:road'||b.key==='ter:trench'||b.key==='ter:wet') macro(mm,0.3,0.06);
       const mesh=new THREE.Mesh(b.geo(),mm); mesh.castShadow=b.shadow&&QUALITY.shadow>0; mesh.receiveShadow=true; mesh.matrixAutoUpdate=false; mesh.updateMatrix(); parent.add(mesh); } B={}; }
   /* a separate mesh (for destructibles) built from the same box helper */
   function boxMesh(fn){ const save=B; B={}; fn(); const g=new THREE.Group(); flush(g); B=save; return g; }
@@ -236,9 +326,10 @@ const World=(()=>{
   async function build(def,theme){
     clear(); mapDef=def; TH=theme; root=new THREE.Group(); root.name='world'; R.scene.add(root);
     lightBudget=QUALITY.lights;
-    buildGround(); buildCliffs(); buildVoid(); buildSolids(); buildBuildingsExtra(); buildBands(); buildLadders();
+    if(TERR) buildTerrain(); else buildGround(); if(TH.cliffKind!=='none') buildCliffs(); buildVoid(); buildSolids(); buildBuildingsExtra(); buildBands(); buildLadders();
     flush(root); AF.flush();
     await Promise.all([buildProps(),buildDecor(),scatter()]);
+    if(def.ww2&&typeof WW2!=='undefined') await WW2.build(root,def,{mat,box,boxMesh,flush,P,lamp,anims,TH});
     makePool();
     buildZones(); buildContact(); buildYard(); buildPaint(); buildPuddles();
     if(TH.rain) addRain(); if(TH.dust) addDust();
@@ -255,6 +346,56 @@ const World=(()=>{
       for(let y=r;y<r1;y++) for(let x=c;x<c1;x++) done[y*W+x]=1;
       box(c*CELL,-0.5,r*CELL,c1*CELL,0,r1*CELL,{py:gk});
     }
+  }
+  /* terrain heightfield (v7.11): smooth where the ground rolls (craters, banks), sharp where it is cut (trench walls).
+     Flat stretches merge into big quads; walls between cells become revetment quads chosen by the lower cell's wall kind. */
+  const TOPK=['th:ground','ter:mud','ter:trench','ter:road','ter:wet'], WALLK=['ter:bank','ter:plank','ter:wicker','ter:conc','ter:logs'];
+  function buildTerrain(){ const T=TERR, Rs=T.res, nx=T.nx, nz=T.nz, Hh=T.h, MK=T.mat, WK=T.wall, SH=0.6;
+    const id=(i,j)=>j*nx+i, hAt=(i,j)=>Hh[id(Math.max(0,Math.min(nx-1,i)),Math.max(0,Math.min(nz-1,j)))];
+    const C=new Float32Array(nx*nz*4), flat=new Uint8Array(nx*nz), sharpA=new Uint8Array(nx*nz);
+    for(let j=0;j<nz;j++) for(let i=0;i<nx;i++){ const hc=Hh[id(i,j)]; for(const [a,b] of [[1,0],[-1,0],[0,1],[0,-1]]) if(Math.abs(hAt(i+a,j+b)-hc)>SH){ sharpA[id(i,j)]=1; break; } }
+    /* one shared height per grid corner: the mean of the smooth cells touching it (sharp cells keep their own level) */
+    const CX=nx+1, CG=new Float32Array(CX*(nz+1)), CN=new Float32Array(CX*(nz+1)*3);
+    for(let cj=0;cj<=nz;cj++) for(let ci=0;ci<=nx;ci++){ let s2=0,n=0; for(const [a,b] of [[ci-1,cj-1],[ci,cj-1],[ci-1,cj],[ci,cj]]){ if(a<0||b<0||a>=nx||b>=nz) continue; const q=id(a,b); if(sharpA[q]) continue; s2+=Hh[q]; n++; }
+      CG[cj*CX+ci]=n?s2/n:hAt(ci,cj); }
+    const cg=(ci,cj)=>CG[Math.max(0,Math.min(nz,cj))*CX+Math.max(0,Math.min(nx,ci))];
+    for(let cj=0;cj<=nz;cj++) for(let ci=0;ci<=nx;ci++){ const gx=(cg(ci+1,cj)-cg(ci-1,cj))/(2*Rs), gz=(cg(ci,cj+1)-cg(ci,cj-1))/(2*Rs), L=Math.hypot(gx,1,gz), k=(cj*CX+ci)*3; CN[k]=-gx/L; CN[k+1]=1/L; CN[k+2]=-gz/L; }
+    for(let j=0;j<nz;j++) for(let i=0;i<nx;i++){ const hc=Hh[id(i,j)], k=id(i,j)*4;
+      if(sharpA[id(i,j)]){ C[k]=C[k+1]=C[k+2]=C[k+3]=hc; flat[id(i,j)]=1; continue; }
+      C[k]=cg(i,j); C[k+1]=cg(i+1,j); C[k+2]=cg(i+1,j+1); C[k+3]=cg(i,j+1);
+      flat[id(i,j)]=Math.abs(C[k]-hc)<1e-4&&Math.abs(C[k+1]-hc)<1e-4&&Math.abs(C[k+2]-hc)<1e-4&&Math.abs(C[k+3]-hc)<1e-4?1:0; }
+    const SM={}, sm=key=>SM[key]||(SM[key]={p:[],n:[],uv:[]});
+    const done=new Uint8Array(nx*nz), SPL=!(typeof QUALITY!=='undefined'&&QUALITY.flatTex), mk=i=>SPL?'ter:splat':(TOPK[MK?MK[i]:0]||'th:ground');
+    for(let j=0;j<nz;j++) for(let i=0;i<nx;i++){ const c=id(i,j); if(done[c]) continue; const key=mk(c), x0=i*Rs, z0=j*Rs;
+      if(!flat[c]){ done[c]=1; const k=c*4, S=sm(key+'#'+(i>>6)+'_'+(j>>6)), V=[[i,j,C[k]],[i+1,j,C[k+1]],[i+1,j+1,C[k+2]],[i,j+1,C[k+3]]];
+        for(const t of [3,2,1,3,1,0]){ const [vi,vj,vy]=V[t], q=(vj*CX+vi)*3; S.p.push(vi*Rs,vy,vj*Rs); S.n.push(CN[q],CN[q+1],CN[q+2]); S.uv.push(vi*Rs,-vj*Rs); } continue; }
+      const h=Hh[c]; let i1=i+1; while(i1<nx){ const q=id(i1,j); if(done[q]||!flat[q]||Hh[q]!==h||mk(q)!==key) break; i1++; }
+      let j1=j+1; outer: for(;j1<nz;j1++){ for(let x=i;x<i1;x++){ const q=id(x,j1); if(done[q]||!flat[q]||Hh[q]!==h||mk(q)!==key) break outer; } }
+      for(let y=j;y<j1;y++) for(let x=i;x<i1;x++) done[id(x,y)]=1;
+      box(x0,h-0.05,z0,i1*Rs,h,j1*Rs,{py:key},false); }
+    for(const key in SM){ const S=SM[key], g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(S.p,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(S.n,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(S.uv,2));
+      g.computeBoundingSphere(); const bk=key.split('#')[0], mm=mat(bk); if(bk==='th:ground') macro(mm,0.32,0.045); else if(bk!=='ter:splat') macro(mm,0.3,0.06); const m=new THREE.Mesh(g,mm); m.receiveShadow=true; m.matrixAutoUpdate=false; root.add(m); }
+    /* walls between neighbouring cells whose shared edge doesn't meet */
+    const wallQuad=(key,p0,p1,top0,top1,bot0,bot1,nrm)=>{ const L=Math.hypot(p1[0]-p0[0],p1[1]-p0[1]), u0=p0[0]*Math.abs(nrm[2])+p0[1]*Math.abs(nrm[0]), u1=u0+L*(nrm[0]+nrm[2]>0?1:-1)*0+L;
+      bk(key).quad([p0[0],bot0,p0[1]],[p1[0],bot1,p1[1]],[p1[0],top1,p1[1]],[p0[0],top0,p0[1]],nrm,[u0,bot0],[u0+L,bot1],[u0+L,top1],[u0,top0]); };
+    /* x-edges (between (i,j) and (i+1,j)), merged down the column while both sides stay flat and level */
+    for(let i=0;i<nx-1;i++){ let run=null; const x=(i+1)*Rs;
+      const close=()=>{ if(run){ wallQuad(run.key,run.hiA?[x,run.z1]:[x,run.z0],run.hiA?[x,run.z0]:[x,run.z1],run.t,run.t,run.b,run.b,[run.hiA?1:-1,0,0]); run=null; } };
+      for(let j=0;j<nz;j++){ const A=id(i,j), B=id(i+1,j), ka=A*4, kb=B*4, a0=C[ka+1], a1=C[ka+2], b0=C[kb], b1=C[kb+3];
+        if(Math.abs(a0-b0)<0.02&&Math.abs(a1-b1)<0.02){ close(); continue; }
+        const hiA=a0+a1>b0+b1, lo=hiA?B:A, key=WALLK[WK?WK[lo]:0]||'ter:bank', z0=j*Rs, z1=z0+Rs;
+        if(flat[A]&&flat[B]){ const t=hiA?a0:b0, b=hiA?b0:a0; if(run&&run.key===key&&run.hiA===hiA&&run.t===t&&run.b===b&&Math.abs(run.z1-z0)<1e-6){ run.z1=z1; continue; } close(); run={key,hiA,t,b,z0,z1}; continue; }
+        close(); if(hiA) wallQuad(key,[x,z1],[x,z0],a1,a0,b1,b0,[1,0,0]); else wallQuad(key,[x,z0],[x,z1],b0,b1,a0,a1,[-1,0,0]); }
+      close(); }
+    /* z-edges (between (i,j) and (i,j+1)) */
+    for(let j=0;j<nz-1;j++){ let run=null; const z=(j+1)*Rs;
+      const close=()=>{ if(run){ wallQuad(run.key,run.hiA?[run.x0,z]:[run.x1,z],run.hiA?[run.x1,z]:[run.x0,z],run.t,run.t,run.b,run.b,[0,0,run.hiA?1:-1]); run=null; } };
+      for(let i=0;i<nx;i++){ const A=id(i,j), B=id(i,j+1), ka=A*4, kb=B*4, a0=C[ka+3], a1=C[ka+2], b0=C[kb], b1=C[kb+1];
+        if(Math.abs(a0-b0)<0.02&&Math.abs(a1-b1)<0.02){ close(); continue; }
+        const hiA=a0+a1>b0+b1, lo=hiA?B:A, key=WALLK[WK?WK[lo]:0]||'ter:bank', x0=i*Rs, x1=x0+Rs;
+        if(flat[A]&&flat[B]){ const t=hiA?a0:b0, b=hiA?b0:a0; if(run&&run.key===key&&run.hiA===hiA&&run.t===t&&run.b===b&&Math.abs(run.x1-x0)<1e-6){ run.x1=x1; continue; } close(); run={key,hiA,t,b,x0,x1}; continue; }
+        close(); if(hiA) wallQuad(key,[x0,z],[x1,z],a0,a1,b0,b1,[0,0,1]); else wallQuad(key,[x1,z],[x0,z],b1,b0,a1,a0,[0,0,-1]); }
+      close(); }
   }
   /* cliffs / perimeter façades on every wall-cell edge facing open space */
   function buildCliffs(){
@@ -385,6 +526,21 @@ const World=(()=>{
           box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,{all:'pkPlat'}); const t=0.06; box(s.x0,s.y1,s.z0,s.x1,s.y1+0.02,s.z0+t,{py:e},false); box(s.x0,s.y1,s.z1-t,s.x1,s.y1+0.02,s.z1,{py:e},false);
           box(s.x0,s.y1,s.z0,s.x0+t,s.y1+0.02,s.z1,{py:e},false); box(s.x1-t,s.y1,s.z0,s.x1,s.y1+0.02,s.z1,{py:e},false); break; }
         case 'low': box(s.x0,0,s.z0,s.x1,s.y1,s.z1,all('st:concrete:ext')); break;
+        /* v7.11 field works */
+        case 'earth': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,{all:'ter:bank',py:'ter:mud'}); break;
+        case 'sandbag': if(TERR&&typeof WW2!=='undefined') break; box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,{all:'ter:bags',ny:null}); break;
+        case 'plank': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,all('ter:plank')); break;
+        case 'firestep': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,{all:s.side==='de'?'ter:wicker':'ter:plank',py:s.side==='de'?'ter:trench':'ter:duck',ny:null}); break;
+        case 'duck': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,{all:'ter:duck',ny:null}); break;
+        case 'log': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,all('ter:logs')); break;
+        case 'conc': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,all('ter:conc')); break;
+        case 'stone': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,{all:'ter:stone',py:s.py||'ter:stone'}); break;
+        case 'brickW': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,all('ter:brick')); break;
+        case 'boards': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,all('ter:boards')); break;
+        case 'floorW': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,{all:'ter:boards',py:'ter:duck'}); break;
+        case 'roofEarth': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,{all:'ter:bank',py:'th:ground',ny:'ter:logs'}); break;
+        case 'steelp': box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,all('metalDark')); break;
+        case 'hidden': case 'wire': case 'wreck': break;
         case 'prop': break;
         case 'af': if(s.af) AF.place(s.af); break;
         default: box(s.x0,s.y0,s.z0,s.x1,s.y1,s.z1,all(S+':ext'));
@@ -410,10 +566,10 @@ const World=(()=>{
         let x0=s.x0,x1=s.x1,z0=s.z0,z1=s.z1;
         if(s.hi==='z0'){ z1=s.z1-run*i; z0=z1-run; } else if(s.hi==='z1'){ z0=s.z0+run*i; z1=z0+run; }
         else if(s.hi==='x0'){ x1=s.x1-run*i; x0=x1-run; } else { x0=s.x0+run*i; x1=x0+run; }
-        box(x0,base===0?0:yb,z0,x1,y1,z1,{all:S+':ext',py:S+':floor'}); }
+        box(x0,base===0?0:yb,z0,x1,y1,z1,TERR?{all:'ter:plank',py:'ter:boards'}:{all:S+':ext',py:S+':floor'}); }
       if(base>0) slope(s,base-0.35,h-0.35,S+':ceil',true);
       return; }
-    slope(s,base,h,s.k==='catwalk'?'grate':S+':floor',false);
+    slope(s,base,h,s.k==='catwalk'?'grate':TERR?(s.k==='plank'?'ter:boards':'ter:road'):S+':floor',false);
     if(s.k==='catwalk') slope(s,base-0.15,h-0.15,'rustBeam',true);
   }
   function slope(s,ya,yb,key,under){
@@ -751,7 +907,7 @@ const World=(()=>{
     m.renderOrder=1; m.matrixAutoUpdate=false; root.add(m);
   }
   /* tag zones: translucent yellow floor + glowing edge */
-  function buildZones(){
+  function buildZones(){ if(TERR&&typeof Game!=='undefined'&&Game.kind!=='tag') return;
     for(const z of ZONES){ const x0=z.c0*CELL,x1=z.c1*CELL,z0=z.r0*CELL,z1=z.r1*CELL;
       const m=new THREE.Mesh(new THREE.PlaneGeometry(x1-x0,z1-z0),new THREE.MeshBasicMaterial({color:'#ffd21f',transparent:true,opacity:0.12,depthWrite:false}));
       m.rotation.x=-Math.PI/2; m.position.set((x0+x1)/2,0.04,(z0+z1)/2); m.renderOrder=1; m.userData.zone=true; root.add(m);
@@ -776,6 +932,7 @@ const World=(()=>{
     for(const a of anims){
       if(a.t==='flicker'){ const f=Math.sin(t*17+a.seed)>0.985?0.25:1; a.m.material.opacity=f; }
       else if(a.t==='spin'){ a.m.rotation.y+=dt*0.6; a.m.rotation.x+=dt*0.25; }
+      else if(a.t==='ww2') a.update(dt,t);
       else if((a.t==='steam'||a.t==='smokestack')&&typeof FX!=='undefined'){ a.acc+=dt; if(a.acc>(a.t==='steam'?0.18:0.35)){ a.acc=0;
         if(a.t==='steam') FX.puff(a.x+(Math.random()-0.5)*0.6,0.2,a.z+(Math.random()-0.5)*0.6,{vy:2.2,size:1.6,life:2.2,color:[0.85,0.85,0.9],alpha:0.25,grow:2});
         else FX.puff(a.x,a.y,a.z,{vy:3,vx:1.5,size:5,life:6,color:[0.45,0.43,0.4],alpha:0.35,grow:3}); } }

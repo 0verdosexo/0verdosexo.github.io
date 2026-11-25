@@ -38,6 +38,7 @@ const Buy=(()=>{
     return HUD.wIcon(k); }
   function render(){ if(!ctx) return; const C=cols(), money=ctx.money?ctx.money():0, B=el().querySelector('.buy-cols');
     $('buyMoney').textContent=ctx.free?ctx.title||'무기 선택':fmtMoney(money);
+    B.style.gridTemplateColumns=`repeat(${C.length},minmax(0,1fr))`;
     B.innerHTML=C.map((c,i)=>`<div class="bc${i===col?' sel':''}"><h4><i>${i+1}</i>${esc(c.name)}</h4>${c.items.map((k,j)=>{ const st=ctx.state(k);
       return `<button class="bi${st.own?' own':''}${st.ok?'':' no'}${st.hide?' hide':''}" data-k="${k}"><i class="n">${j+1}</i><b>${esc(itemName(k))}</b>${icon(k)}<span class="p">${ctx.free?(st.own?'사용 중':''):st.own?'보유':fmtMoney(st.price)}</span></button>`; }).join('')}</div>`).join('');
     B.querySelectorAll('.bi').forEach(b=>{ b.onclick=()=>choose(b.dataset.k); b.onmouseenter=()=>hint(b.dataset.k); });
